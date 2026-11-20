@@ -10,4 +10,4 @@ It is a monitoring tool, not investment advice.
 - **Tests:** `python -m pytest -q`. Run them after any change to `tracker/`.
 - **SEC requests:** the User-Agent contact comes from the `SEC_CONTACT_EMAIL` env var. Never commit an email address.
 - **FRED:** rejects custom User-Agents. Keep the requests default for non-SEC hosts.
-- **Yahoo:** raw closes are used for price levels (P/NAV, drawdown, VIX/MOVE). Dividend-adjusted closes are used for returns and relative performance.
+- **Yahoo:** raw closes are used for price levels (P/NAV, VIX/MOVE). Dividend-adjusted closes are used for BIZD drawdown, returns and relative performance.

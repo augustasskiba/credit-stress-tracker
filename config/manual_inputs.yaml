@@ -10,19 +10,25 @@ quarterly:
   nonaccrual_pct: []
   #  - {date: 2026-09-30, value: 1.9, source: "ARCC/OBDC/FSK/BXSL Q3 10-Qs"}
   pik_pct: []
-  redemption_requests_pct: []
-  gated_quarters: []
+  redemption_requests_pct:
+    - {date: 2026-03-31, value: 11.6, source: "Ares Strategic Income Fund Q1 requests 11.6% of NAV (ADS 11.2%), https://www.withintelligence.com/insights/apollo-and-ares-cap-redemptions-for-non-traded-bdcs/"}
+    - {date: 2026-06-30, value: 16.8, source: "Apollo Debt Solutions prior-quarter requests 16.8% (reported), https://www.dealstreetasia.com/?p=495897 - verify vs SC TO-I/A"}
+    - {date: 2026-09-30, value: 14.7, source: "Apollo Debt Solutions latest tender ~14.7% (reported), https://www.dealstreetasia.com/?p=495897 - verify vs SC TO-I/A"}
+  gated_quarters:
+    - {date: 2026-03-31, value: 1, source: "Apollo ADS, Ares ASIF, HPS, MSIM capped at 5% in Q1 2026 (withintelligence.com, PGIM)"}
+    - {date: 2026-06-30, value: 2, source: "BCRED Q2 prorated ~48.5% (bnnbloomberg.ca 2026-09-03)"}
+    - {date: 2026-09-30, value: 3, source: "BCRED Q3 prorated 49.88%, final SC TO-I/A 2026-11-02, https://altstreet.investments/news/bcred-q3-2026-tender-offer-prorated-49-88-percent-2026-11-02"}
 
 # Judgement signals: status is green | amber | red. Refresh weekly (they go STALE after max_age_days).
 judgements:
   bank_disclosures:
-    status: null
-    as_of: null
-    note: "Not reviewed yet."
+    status: green
+    as_of: 2026-11-20
+    note: "First run, hit list only: WFC 10-Q 'fund finance', ZION/MTB 10-Q 'nondepository financial', C/BAC 10-Q 'reserve build'. These look like routine disclosures; the filings were not read in full. No NBFI losses seen."
   insurer_ratings:
-    status: null
-    as_of: null
-    note: "Not reviewed yet."
+    status: amber
+    as_of: 2026-11-20
+    note: "AM Best downgraded A-CAP Group insurers again (~12 Nov 2026), after Sept downgrades and a South Carolina regulator petition. https://insurancenewsnet.com/innarticle/am-best-downgrades-a-cap-insurers-amid-financial-and-regulatory-troubles. No Moody's/S&P life-insurer downgrades found."
 
 # Fed / official-sector interventions (new facility, emergency cut, etc.). Shown in the report.
 # They reduce severity but never auto-clear signals.

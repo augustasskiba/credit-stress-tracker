@@ -81,7 +81,7 @@ def build_run(ds: DataStore, mode: str, asof: dt.date, extra: dict | None = None
     comp = comp_mod.composite(results, load_yaml("composite.yaml"))
     # Signal statuses: compare with the latest run of any mode. Composite: same mode only,
     # because the daily run sees only Stages 2 and 4 and would otherwise read lower.
-    prev_status, prev_level = history.previous_state(DATA, mode)
+    prev_status, prev_level = history.previous_state(DATA, mode, exclude_prefix=f"{asof.isoformat()}-{mode}-")
     alerts = history.compute_alerts(results, comp, prev_status, prev_level)
     run = {
         "mode": mode,

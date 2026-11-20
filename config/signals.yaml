@@ -26,7 +26,7 @@ signals:
     stage: 1
     name: BDC ETF (BIZD) from 52w high
     unit: "%"
-    source: {type: yahoo, ticker: BIZD}
+    source: {type: yahoo, ticker: BIZD, adjusted: true}   # total return: distributions are not losses
     transform: [{drawdown: 252}]
     rule: {op: lt, amber: -10, red: -20}
     max_age_days: 5

@@ -1,6 +1,6 @@
 # Credit Stress Tracker
 
-This tracker watches whether private-credit ("shadow debt") stress is spreading into banks (Stage 3) and funding markets (Stage 4). It scores 33 signals green, amber or red from free data: FRED, the NY Fed Markets API, Yahoo Finance and SEC EDGAR. It then emails a weekly report, plus an alert when something turns red.
+This tracker watches whether private-credit ("shadow debt") stress is spreading into banks (Stage 3) and funding markets (Stage 4). It scores 29 signals green, amber or red from free data: FRED, the NY Fed Markets API, Yahoo Finance and SEC EDGAR. It then emails a weekly report, plus an alert when something turns red.
 
 > This is a monitoring tool, not investment advice or a timing signal. Thresholds are rules of thumb. Tune them in `config/signals.yaml`.
 

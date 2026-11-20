@@ -109,69 +109,71 @@ def _context_md(run: dict) -> list[str]:
 
 
 # ------------------------------------------------------------------ HTML
-def _td(content: str, align="left", extra="") -> str:
-    nowrap = "white-space:nowrap;" if align == "right" or extra == "nowrap" else ""
-    return f'<td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:{align};{nowrap}">{content}</td>'
+# Compact e-mail HTML: one <style> block (Gmail supports embedded CSS) + short class names.
+CSS = (
+    "body,.w{font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#111827;font-size:14px;line-height:1.45}"
+    ".w{max-width:760px}.m{color:#6b7280}.s{color:#9ca3af;font-size:11px}"
+    "h3{margin:18px 0 6px;font-size:15px}"
+    "table{border-collapse:collapse;width:100%;font-size:13px}"
+    "th{padding:5px 7px;text-align:left;border-bottom:1px solid #d1d5db;background:#f9fafb;color:#374151}"
+    "td{padding:5px 7px;border-bottom:1px solid #e5e7eb;vertical-align:top}"
+    ".n{text-align:right;white-space:nowrap}.nw{white-space:nowrap}"
+    ".sp{font-family:Menlo,Consolas,monospace;letter-spacing:-1px;white-space:nowrap}"
+    ".green{color:#1a7f37}.amber{color:#b7791f}.red{color:#c53030}.stale{color:#6b7280}.na{color:#9ca3af}"
+    ".box{padding:8px 12px;margin-bottom:14px;border-left:4px solid}.al{border-color:#c53030;background:#fef2f2}"
+    ".di{border-color:#6b7280;background:#f3f4f6}"
+    ".bd{display:inline-block;color:#fff;padding:6px 12px;border-radius:6px;font-weight:600}"
+)
+
+
+def _cls(status: str) -> str:
+    return "na" if status == "n/a" else status
 
 
 def to_html(run: dict) -> str:
     e = html.escape
     comp = run["composite"]
     lc = LEVEL_COLORS.get(comp["level"], "#374151")
-    parts = ['<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#111827;max-width:760px;font-size:14px;line-height:1.45">']
-    parts.append(f'<h2 style="margin:0 0 4px">Credit Stress Tracker</h2><div style="color:#6b7280;margin-bottom:12px">'
-                 f'{e(run["mode"].title())} run · data as of {e(run["asof"])}</div>')
-    parts.append(f'<div style="display:inline-block;background:{lc};color:#fff;padding:6px 12px;border-radius:6px;font-weight:600">'
-                 f'Composite: {e(comp["name"])} · level {comp["level"]}/3</div>')
-    parts.append('<ul style="margin:12px 0 16px;padding-left:20px">' +
-                 "".join(f"<li>{e(x)}</li>" for x in summary_lines(run)) + "</ul>")
-
+    p = [f'<html><head><meta charset="utf-8"><style>{CSS}</style></head><body><div class="w">',
+         f'<h2 style="margin:0 0 4px">Credit Stress Tracker</h2>'
+         f'<div class="m" style="margin-bottom:12px">{e(run["mode"].title())} run · data as of {e(run["asof"])}</div>',
+         f'<div class="bd" style="background:{lc}">Composite: {e(comp["name"])} · level {comp["level"]}/3</div>',
+         "<ul>" + "".join(f"<li>{e(x)}</li>" for x in summary_lines(run)) + "</ul>"]
     if run["alerts"]:
-        parts.append('<div style="border-left:4px solid #c53030;background:#fef2f2;padding:8px 12px;margin-bottom:16px">'
-                     '<b>🔴 Alerts</b><ul style="margin:4px 0;padding-left:20px">' +
-                     "".join(f"<li>{e(_alert_text(a))}</li>" for a in run["alerts"]) + "</ul></div>")
+        p.append('<div class="box al"><b>🔴 Alerts</b><ul>' +
+                 "".join(f"<li>{e(_alert_text(a))}</li>" for a in run["alerts"]) + "</ul></div>")
     stale = [r for r in run["results"] if r["status"] == "stale"]
     if stale:
-        parts.append('<div style="border-left:4px solid #6b7280;background:#f3f4f6;padding:8px 12px;margin-bottom:16px">'
-                     '<b>⚠ Data issues</b><ul style="margin:4px 0;padding-left:20px">' +
-                     "".join(f"<li>{e(r['name'])}: {e(r['error'] or r['note'])}</li>" for r in stale) + "</ul></div>")
-
+        p.append('<div class="box di"><b>⚠ Data issues</b><ul>' +
+                 "".join(f"<li>{e(r['name'])}: {e(r['error'] or r['note'])}</li>" for r in stale) + "</ul></div>")
     for st, title in STAGES.items():
         rows = [r for r in run["results"] if r["stage"] == st]
         if not rows:
             continue
-        parts.append(f'<h3 style="margin:18px 0 6px;font-size:15px">{e(title)}</h3>')
-        parts.append('<table style="border-collapse:collapse;width:100%;font-size:13px"><tr style="background:#f9fafb;color:#374151">'
-                     + "".join(f'<th style="padding:6px 8px;text-align:{a};border-bottom:1px solid #d1d5db">{h}</th>'
-                               for h, a in [("Signal", "left"), ("Value", "right"), ("1w Δ", "right"), ("3m Δ", "right"),
-                                            ("Status", "left"), ("Trend", "left")]) + "</tr>")
+        p.append(f"<h3>{e(title)}</h3><table><tr><th>Signal</th><th class=n>Value</th><th class=n>1w Δ</th>"
+                 "<th class=n>3m Δ</th><th>Status</th><th>Trend</th></tr>")
         for r in rows:
-            c = COLORS[r["status"]]
-            note = f'<div style="color:#6b7280;font-size:11px">{e(r["note"])}</div>' if r["note"] and r["status"] != "stale" else ""
-            asof = f'<div style="color:#9ca3af;font-size:11px;white-space:nowrap">as of {e(r["last_date"])}</div>' if r["last_date"] else ""
-            parts.append("<tr>" + _td(e(r["name"]) + note) + _td(e(fmt(r["value"], r["unit"])) + asof, "right")
-                         + _td(e(fmt(r["chg_1w"], r["unit"], True)), "right")
-                         + _td(e(fmt(r["chg_3m"], r["unit"], True)), "right")
-                         + _td(f'<span style="color:{c};font-weight:600">● {e(r["status"])}</span>', extra="nowrap")
-                         + _td(f'<span style="font-family:Menlo,Consolas,monospace;color:{c};letter-spacing:-1px">{e(r["spark"])}</span>', extra="nowrap")
-                         + "</tr>")
-        parts.append("</table>")
-
+            c = _cls(r["status"])
+            note = f'<div class="s">{e(r["note"])}</div>' if r["note"] and r["status"] != "stale" else ""
+            asof = f'<div class="s">{e(r["last_date"])}</div>' if r["last_date"] else ""
+            p.append(f'<tr><td>{e(r["name"])}{note}</td><td class=n>{e(fmt(r["value"], r["unit"]))}{asof}</td>'
+                     f'<td class=n>{e(fmt(r["chg_1w"], r["unit"], True))}</td><td class=n>{e(fmt(r["chg_3m"], r["unit"], True))}</td>'
+                     f'<td class="nw {c}"><b>● {e(r["status"])}</b></td><td class="sp {c}">{e(r["spark"])}</td></tr>')
+        p.append("</table>")
     if run.get("fed_actions"):
-        parts.append('<h3 style="margin:18px 0 6px;font-size:15px">Fed / official actions</h3><ul>' +
-                     "".join(f"<li>{e(str(x['date']))}: {e(x['action'])}</li>" for x in run["fed_actions"]) + "</ul>")
+        p.append("<h3>Fed / official actions</h3><ul>" +
+                 "".join(f"<li>{e(str(x['date']))}: {e(x['action'])}</li>" for x in run["fed_actions"]) + "</ul>")
     if run.get("upcoming"):
-        parts.append('<h3 style="margin:18px 0 6px;font-size:15px">Upcoming (next 14 days)</h3><ul>' +
-                     "".join(f"<li>{e(str(x['date']))}: {e(x['name'])}</li>" for x in run["upcoming"]) + "</ul>")
+        p.append("<h3>Upcoming (next 14 days)</h3><ul>" +
+                 "".join(f"<li>{e(str(x['date']))}: {e(x['name'])}</li>" for x in run["upcoming"]) + "</ul>")
     scan = run.get("edgar_scan") or {}
     if scan.get("keywords"):
-        parts.append(f'<h3 style="margin:18px 0 6px;font-size:15px">EDGAR keyword scan (last {scan["lookback_days"]} days, filings mentioning)</h3>'
-                     '<table style="border-collapse:collapse;font-size:13px"><tr>' +
-                     "".join(f'<th style="padding:4px 8px;text-align:left;border-bottom:1px solid #d1d5db">{h}</th>' for h in ("Keyword", "Banks", "Insurers")) + "</tr>" +
-                     "".join("<tr>" + _td(e(k)) + _td(str(v["banks"]["total"]), "right") + _td(str(v["insurers"]["total"]), "right") + "</tr>"
-                             for k, v in scan["keywords"].items()) + "</table>")
-    parts.append(f'<p style="color:#9ca3af;font-size:11px;margin-top:20px">{e(DISCLAIMER)}</p></div>')
-    return "".join(parts)
+        p.append(f'<h3>EDGAR keyword scan (filings in last {scan["lookback_days"]} days)</h3>'
+                 '<table style="width:auto"><tr><th>Keyword</th><th class=n>Banks</th><th class=n>Insurers</th></tr>' +
+                 "".join(f'<tr><td>{e(k)}</td><td class=n>{v["banks"]["total"]}</td><td class=n>{v["insurers"]["total"]}</td></tr>'
+                         for k, v in scan["keywords"].items()) + "</table>")
+    p.append(f'<p class="s" style="margin-top:20px">{e(DISCLAIMER)}</p></div></body></html>')
+    return "".join(p)
 
 
 def to_text(run: dict) -> str:

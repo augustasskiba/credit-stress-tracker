@@ -182,7 +182,7 @@ The Phase 3 replay doubles as a threshold sanity check. ICE BofA OAS history on 
 ## 8a. Implementation notes (from the build)
 
 - **FRED User-Agents:** FRED drops requests that carry unknown custom User-Agents. Non-SEC hosts use the `requests` library's default UA.
-- **Yahoo prices:** dividend-adjusted closes push historical BDC prices down by every later dividend (about 10% a year). Price-level signals (P/NAV, BIZD drawdown, VIX, MOVE) use **raw** closes. Return-based signals (BKLN 1m, KRE/KBE vs SPY, forced selling) use **adjusted** total-return closes.
+- **Yahoo prices:** dividend-adjusted closes push historical BDC prices down by every later dividend (about 10% a year). Price-level signals (P/NAV, VIX, MOVE) use **raw** closes. Return-based signals (BIZD drawdown, BKLN 1m, KRE/KBE vs SPY, forced selling) use **adjusted** total-return closes.
 - **Non-traded funds:** the redemption signal is split in two. `nontraded_redemptions` (requests > 5% → amber) and `nontraded_gates` (gated 1 qtr → amber, 2+ → red).
 - **Judgement signals:** `bank_disclosures` and `insurer_ratings` are set weekly by the Claude run in `manual_inputs.yaml`. They go STALE after 10 days, which forces the weekly review.
 - **Replay** (`data/replay.csv`, weekly from Jan 2024): composite was level 0 in 21 weeks and level 1 in 130. The level-1 weeks are driven mainly by FSK/OBDC P/NAV and BIZD, plus CCC OAS in 2026. FSK has traded below 0.90× NAV for most of the period. Consider a per-BDC baseline after a few weeks of data.
