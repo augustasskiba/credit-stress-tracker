@@ -123,3 +123,17 @@ def test_stress_direction():
     assert stress_direction({"op": "lt", "amber": 1, "red": 0}) == -1
     assert stress_direction({"amber": [{"rising": 2}], "red": [{"rising": 3}]}) == 1
     assert stress_direction(None) == 0
+
+
+def test_low_coverage_warning():
+    import datetime as dt
+    from tracker.signals import score_signal
+
+    sig = {"id": "na", "stage": 1, "name": "Non-accruals", "unit": "%", "max_age_days": 150,
+           "source": {"type": "manual", "key": "nonaccrual_pct", "of": 4, "min_n": 3},
+           "rule": {"amber": [{"rising": 2}], "red": [{"rising": 3}]}}
+    rows = [{"date": "2026-06-30", "value": 2.0, "n": 4}, {"date": "2026-09-30", "value": 2.4, "n": 1, "bdcs": ["ARCC"]}]
+    r = score_signal(sig, None, {"quarterly": {"nonaccrual_pct": rows}}, dt.date(2026, 11, 20))
+    assert "1 of 4 BDCs (ARCC)" in r.warning and r.value == 2.4
+    rows[-1]["n"] = 3
+    assert score_signal(sig, None, {"quarterly": {"nonaccrual_pct": rows}}, dt.date(2026, 11, 20)).warning == ""

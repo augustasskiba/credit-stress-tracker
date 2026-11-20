@@ -54,7 +54,7 @@ Edit `config/manual_inputs.yaml`. Set `as_of` to today's date (YYYY-MM-DD) for e
 
 **d. Quarterly series** (`quarterly.*`). Update these only when you find a cited figure for a quarter that is not yet recorded:
   - `redemption_requests_pct` and `gated_quarters`: news on redemption requests and pro-rating at large non-traded BDCs and interval funds.
-  - `nonaccrual_pct` and `pik_pct`: only in weeks when `out/run.json → upcoming` mentions BDC earnings, or when the latest quarter is missing. Use the earnings releases and 10-Qs of ARCC, OBDC, FSK and BXSL. Use the simple average of the four, and list each component in `source`.
+  - `nonaccrual_pct` and `pik_pct`: only in weeks when `out/run.json → upcoming` mentions BDC earnings, or when the latest quarter is missing. Use the earnings releases and 10-Qs of ARCC, OBDC, FSK and BXSL. Use the simple average of **whichever of the four have reported** (each value cited), and record `n` (how many) and `bdcs` (which) on the row, e.g. `{date: 2026-09-30, value: 2.4, n: 1, bdcs: [ARCC], source: "..."}`. When more BDCs report later, update that quarter's row instead of adding a new one. If `n` is below 3, the report flags low coverage; also say so in the summary's third line.
 
 ## 3. Summary
 

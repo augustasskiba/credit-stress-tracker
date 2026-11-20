@@ -78,9 +78,9 @@ def to_markdown(run: dict) -> str:
     out += [f"- {x}" for x in summary_lines(run)] + [""]
     if run["alerts"]:
         out += ["## 🔴 Alerts", ""] + [f"- {_alert_text(a)}" for a in run["alerts"]] + [""]
-    stale = [r for r in run["results"] if r["status"] == "stale"]
+    stale = [r for r in run["results"] if r["status"] == "stale" or r.get("warning")]
     if stale:
-        out += ["## ⚠ Data issues", ""] + [f"- **{r['name']}**: {r['error'] or r['note']}" for r in stale] + [""]
+        out += ["## ⚠ Data issues", ""] + [f"- **{r['name']}**: {r.get('warning') or r['error'] or r['note']}" for r in stale] + [""]
     for st, title in STAGES.items():
         rows = [r for r in run["results"] if r["stage"] == st]
         if not rows:
@@ -334,11 +334,11 @@ def to_html(run: dict, img_src: dict | None = None, email: bool = False) -> str:
         p.append(f'<div style="border:1px solid #f5c2c0;border-left:4px solid {WORSE};background:#fff5f5;border-radius:6px;padding:10px 14px;margin-bottom:16px">'
                  f'<div style="font-weight:700;color:{WORSE};margin-bottom:4px">🔴 New red signals</div><ul style="margin:0;padding-left:18px">' +
                  "".join(f'<li style="margin-bottom:2px">{e(_alert_text(a))}</li>' for a in run["alerts"]) + "</ul></div>")
-    stale = [r for r in run["results"] if r["status"] == "stale"]
+    stale = [r for r in run["results"] if r["status"] == "stale" or r.get("warning")]
     if stale:
         p.append(f'<div style="border:1px solid {RULE};border-left:4px solid {FAINT};background:{SURFACE};border-radius:6px;padding:10px 14px;margin-bottom:16px">'
                  '<div style="font-weight:700;margin-bottom:4px">⚠ Data issues</div><ul style="margin:0;padding-left:18px">' +
-                 "".join(f"<li>{e(r['name'])}: {e(r['error'] or r['note'])}</li>" for r in stale) + "</ul></div>")
+                 "".join(f"<li>{e(r['name'])}: {e(r.get('warning') or r['error'] or r['note'])}</li>" for r in stale) + "</ul></div>")
 
     p.append(_stage_tiles(run))
 
@@ -400,6 +400,9 @@ def to_text(run: dict) -> str:
     lines += summary_lines(run) + [""]
     for a in run["alerts"]:
         lines.append("ALERT: " + _alert_text(a))
+    for r in run["results"]:
+        if r.get("warning"):
+            lines.append(f"DATA: {r['name']}: {r['warning']}")
     for st, title in STAGES.items():
         lines.append("")
         lines.append(title)

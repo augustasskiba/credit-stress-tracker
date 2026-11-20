@@ -2,8 +2,10 @@
 # (it must cite a source in `note` / `source` for every value it adds).
 
 # Quarterly series. One row per quarter-end date. Leave empty until you have real numbers.
-# nonaccrual_pct: weighted-average non-accruals at cost across ARCC, OBDC, FSK, BXSL
-# pik_pct:        PIK income as % of total investment income, same group
+# nonaccrual_pct: simple average of non-accruals at cost across whichever of ARCC, OBDC, FSK, BXSL have reported
+# pik_pct:        PIK income as % of total investment income, same group and method
+#   Each row also carries n (how many of the 4 BDCs are in the average) and bdcs (which ones).
+#   Fewer than 3 of 4 is flagged as low coverage in the report. Update the same quarter's row as more BDCs report.
 # redemption_requests_pct: highest redemption-request % of NAV among large non-traded BDCs / interval funds
 # gated_quarters: consecutive quarters (to date) in which at least one large non-traded fund pro-rated / gated
 quarterly:

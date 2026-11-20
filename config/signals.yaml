@@ -64,14 +64,14 @@ signals:
     stage: 1
     name: BDC non-accruals (% of portfolio at cost)
     unit: "%"
-    source: {type: manual, key: nonaccrual_pct}
+    source: {type: manual, key: nonaccrual_pct, of: 4, min_n: 3}   # warn if fewer than 3 of 4 BDCs reported
     rule: {amber: [{rising: 2}], red: [{rising: 3}]}
     max_age_days: 150
   - id: bdc_pik
     stage: 1
     name: BDC PIK income share
     unit: "%"
-    source: {type: manual, key: pik_pct}
+    source: {type: manual, key: pik_pct, of: 4, min_n: 3}
     rule: {amber: [{rising: 2}], red: [{rising: 3}]}
     max_age_days: 150
   - id: nontraded_redemptions

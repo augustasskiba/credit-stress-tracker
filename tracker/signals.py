@@ -30,6 +30,7 @@ class Result:
     history: list = field(default_factory=list)   # [(date, value)] last ~13 weekly points (text sparkline)
     chart: list = field(default_factory=list)     # [(date, value)] ~6 months daily, or last 12 obs (PNG chart)
     direction: int = 0                            # +1: a rise means more stress, -1: a fall does, 0: unknown
+    warning: str = ""                             # shown in the report's data-issues box (e.g. low coverage)
 
     def to_dict(self):
         return asdict(self)
@@ -137,6 +138,17 @@ def score_signal(sig: dict, ds: DataStore, manual: dict, asof: dt.date, spark_n:
     max_age = int(sig.get("max_age_days", 7))
     src = sig["source"]
 
+    warning = ""
+    if src["type"] == "manual" and src.get("of"):
+        rows = sorted((manual.get("quarterly") or {}).get(src["key"]) or [], key=lambda r: str(r["date"]))
+        if rows and rows[-1].get("n") is not None:
+            n, of = int(rows[-1]["n"]), int(src["of"])
+            if n < int(src.get("min_n", of)):
+                who = rows[-1].get("bdcs") or ""
+                warning = (f"Low coverage: latest quarter ({str(rows[-1]['date'])[:10]}) averages {n} of {of} BDCs"
+                           + (f" ({', '.join(who) if isinstance(who, list) else who})" if who else "")
+                           + "; the trend rule compares averages of different BDC sets")
+
     if src["type"] == "judgement":
         j = (manual.get("judgements") or {}).get(src["key"]) or {}
         status, as_of = j.get("status"), j.get("as_of")
@@ -187,6 +199,7 @@ def score_signal(sig: dict, ds: DataStore, manual: dict, asof: dt.date, spark_n:
         chg_3m=None if v3m is None else value - v3m,
         spark=sparkline(list(pts.values)),
         note=note,
+        warning=warning,
         history=[(d.strftime("%Y-%m-%d"), round(float(v), 4)) for d, v in pts.items()],
         chart=[(d.strftime("%Y-%m-%d"), round(float(v), 4)) for d, v in chart_s.items()],
     )
