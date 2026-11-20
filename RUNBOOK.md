@@ -102,7 +102,7 @@ git commit -m "<weekly|daily> run <date>: <composite name>, <n> red / <n> amber"
 git push origin main
 ```
 
-Retry the push up to 4 times with backoff. If it is rejected because main moved, run `git pull --rebase origin main` and push again.
+Push to `main` only. Do not create or push any other branch, even if the session started on one. Retry the push up to 4 times with backoff. If it is rejected because main moved, run `git pull --rebase origin main` and push again.
 
 ## 7. Final reply
 
