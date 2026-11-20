@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import html
+import re
 
 STAGES = {
     1: "Stage 1 · Inside private credit",
@@ -13,6 +14,16 @@ COLORS = {"green": "#1a7f37", "amber": "#b7791f", "red": "#c53030", "stale": "#6
 EMOJI = {"green": "🟢", "amber": "🟠", "red": "🔴", "stale": "⚪", "n/a": "▫️"}
 LEVEL_COLORS = {0: "#1a7f37", 1: "#b7791f", 2: "#dd6b20", 3: "#c53030"}
 DISCLAIMER = "Monitoring tool only, not investment advice or a timing signal. Thresholds are rules of thumb."
+
+
+_SEC_URL = re.compile(r"https?://(?:www\.|efts\.|data\.)?sec\.gov/[^\s<>\"')]*")
+
+
+def email_safe(text: str) -> str:
+    """Replace SEC links in e-mail bodies with a pointer to the repo report (owner's choice, 2026-11-20).
+    The session's privacy guard refuses Gmail sends that put the owner's address next to sec.gov
+    links; the full links stay in reports/<date>.md and config/manual_inputs.yaml."""
+    return _SEC_URL.sub("[SEC filing: link in repo report]", text)
 
 
 def fmt(v, unit: str, signed: bool = False) -> str:

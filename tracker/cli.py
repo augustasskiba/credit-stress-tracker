@@ -119,8 +119,8 @@ def write_outputs(run: dict):
     (OUT / "email.json").write_text(json.dumps({
         "should_send": should_send,
         "subject": render.subject(run),
-        "html": render.to_html(run, {i["id"]: f"cid:att{n}" for n, i in enumerate(imgs)}),
-        "text": render.to_text(run),
+        "html": render.email_safe(render.to_html(run, {i["id"]: f"cid:att{n}" for n, i in enumerate(imgs)})),
+        "text": render.email_safe(render.to_text(run)),
         "attachments": attachments,
     }, indent=2))
 
