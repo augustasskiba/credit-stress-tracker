@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m tracker:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(pip install:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git pull:*)",
+      "Bash(git push origin main)",
+      "Bash(gh api repos/augustasskiba/credit-stress-tracker/issues:*)",
+      "WebSearch",
+      "WebFetch",
+      "mcp__Gmail__send_message"
+    ]
+  }
+}
