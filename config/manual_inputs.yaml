@@ -24,11 +24,11 @@ judgements:
   bank_disclosures:
     status: green
     as_of: 2026-11-20
-    note: "First run, hit list only: WFC 10-Q 'fund finance', ZION/MTB 10-Q 'nondepository financial', C/BAC 10-Q 'reserve build'. These look like routine disclosures; the filings were not read in full. No NBFI losses seen."
+    note: "Q3 10-Qs read (keyword sections): WFC loan growth incl. 'fund finance' demand, no losses; ZION NDFI loans $2.2bn (4% of loans), nonaccrual 0.4%, 9M NDFI NCOs 0%, ACL/NDFI 1.31%; MTB NDFI table (PE funds $3.3bn outstanding), no losses cited; C reserve build $369m from macro outlook/growth, BAC qualitative build for Middle East conflict, KEY build on economic conditions; none tied to NBFI/private credit. https://www.sec.gov/Archives/edgar/data/72971/000007297126000327/wfc-20260930.htm https://www.sec.gov/Archives/edgar/data/109380/000010938026000127/zions-20260930.htm https://www.sec.gov/Archives/edgar/data/36270/000003627026000060/mtb-20260930.htm https://www.sec.gov/Archives/edgar/data/831001/000083100126000056/c-20260930.htm https://www.sec.gov/Archives/edgar/data/70858/000007085826000548/bac-20260930.htm https://www.sec.gov/Archives/edgar/data/91576/000009157626000023/key-20260930.htm"
   insurer_ratings:
-    status: amber
+    status: green
     as_of: 2026-11-20
-    note: "AM Best downgraded A-CAP Group insurers again (~12 Nov 2026), after Sept downgrades and a South Carolina regulator petition. https://insurancenewsnet.com/innarticle/am-best-downgrades-a-cap-insurers-amid-financial-and-regulatory-troubles. No Moody's/S&P life-insurer downgrades found."
+    note: "No AM Best/Moody's/S&P/Fitch downgrades or negative outlooks on US life/annuity insurers found for 13-20 Nov 2026. Correction to the earlier note: the cited A-CAP downgrade (Atlantic Coast Life, Sentinel Security Life to C+) is dated 23 Sep 2026, not Nov (https://insurancenewsnet.com/innarticle/am-best-downgrades-a-cap-insurers-amid-financial-and-regulatory-troubles). A further undated A-CAP cut to C- is reported (https://insurancenewsnet.com/innarticle/am-best-downgrades-ratings-of-a-cap-group-insurers); its date could not be confirmed. Brighthouse ratings are on watch/review (undated, https://investor.brighthousefinancial.com/financial-ratings)."
 
 # Fed / official-sector interventions (new facility, emergency cut, etc.). Shown in the report.
 # They reduce severity but never auto-clear signals.
