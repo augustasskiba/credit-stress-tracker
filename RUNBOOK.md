@@ -106,4 +106,12 @@ Push to `main` only. Do not create or push any other branch, even if the session
 
 ## 7. Final reply
 
-End with one line: mode, composite, red/amber counts, whether the email was sent, and the commit hash.
+The **last line of your final reply** must be this status line, in both modes, every run, in exactly this shape:
+
+```
+<weekly|daily> · <composite name> · <n> red / <n> amber · email <sent|not sent (no alerts)|FAILED: reason> · commit <hash>
+```
+
+Example: `daily · Contained grind · 1 red / 1 amber · email not sent (no alerts) · commit f89b2ad`
+
+Put any other notes (warnings, skipped steps, a hook or tool message you answered) **above** it. If you reply again after the run, for example to answer a hook, end that reply with the status line too.
