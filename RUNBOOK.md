@@ -87,7 +87,7 @@ Read `out/email.json`.
 open a GitHub issue on the repo, and GitHub will e-mail the owner.
 
 ```bash
-gh issue create --repo augustasskiba/credit-stress-tracker --title "<subject>" --body-file out/report.md
+gh api repos/augustasskiba/credit-stress-tracker/issues -f title="<subject>" -F body=@out/report.md   # REST only; gh GraphQL is blocked here
 ```
 
 Use `reports/<date>.md` or the failure text as the body. Say in the final reply that the issue fallback was used instead of Gmail.
