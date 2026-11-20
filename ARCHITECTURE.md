@@ -43,7 +43,7 @@ The tracker runs as **Claude Code cloud scheduled tasks**. Every run starts a fr
 | **Credit Stress Weekly Report** | Mon 10:05, in the inbox by about 10:30 | All 4 stages, judgement and news checks, EDGAR scan | Always |
 | **Credit Stress Daily Check** | Tue–Sat 07:07, after the US close | Stages 2 and 4 only | Only on a new red signal or a composite rise |
 
-- Both tasks start a new session per run in environment `credit-stress-tracker`, on **Claude Sonnet 5.5** (switched from Opus 5.5 on 2026-11-20 to halve the cost). Each has the repo `augustasskiba/credit-stress-tracker` and the Gmail connector attached.
+- Both tasks start a new session per run in environment `credit-stress-tracker`, on a split model setup (2026-11-20): the **weekly report on Claude Opus 5.5** for its judgement work (reading filings, dating news, sourcing BDC figures), and the **daily check on Claude Sonnet 5.5**, which is mostly mechanical and costs half as much per token. Each has the repo `augustasskiba/credit-stress-tracker` and the Gmail connector attached.
 - The cron uses the London zone, so BST and GMT changes are handled automatically.
 - Monday's report includes Friday's H.8 release (Fri 16:15 ET) and the Friday close. "1-week change" means Fri→Fri.
 - Quarterly reminders (SLOOS, bank and BDC earnings, IMF GFSR, Fed FSR) appear in the weekly email under "Coming up", from `config/calendar.yaml`.
@@ -176,7 +176,7 @@ Every signal is defined in `config/signals.yaml`. No thresholds appear in code.
 
 ## 10. Cost and plan usage
 
-Measured 2026-11-20 on Opus 5.5 at list prices. The tasks now run on **Sonnet 5.5**, which is half the per-token price ($2 / $10 per MTok in/out, $0.10 cache reads), so expect roughly half the figures below. Confirm with the first Sonnet runs.
+Measured 2026-11-20 on Opus 5.5 at list prices. The weekly report stays on Opus 5.5. The daily check now runs on **Sonnet 5.5**, which is half the per-token price ($2 / $10 per MTok in/out, $0.10 cache reads), so expect about $0.13 per daily check.
 
 | Run | API-equivalent | Drivers |
 |---|---|---|
@@ -184,7 +184,7 @@ Measured 2026-11-20 on Opus 5.5 at list prices. The tasks now run on **Sonnet 5.
 | Daily check | ~$0.26 | Short run, no email unless alerting |
 | **Per week** | **~$3.00–3.60** | **≈ 1.0–1.3% of the Pro weekly limit**, up to ~6% of a 5-hour window on Monday morning |
 
-Effort level matters little here, because thinking is under 10% of output. On Sonnet 5.5, expect about $1.50–1.80 a week (about 0.5–0.7% of the Pro weekly limit).
+Effort level matters little here, because thinking is under 10% of output. With the daily check on Sonnet 5.5, expect about $2.30–3.00 a week (about 0.8–1.1% of the Pro weekly limit).
 
 ---
 
@@ -206,5 +206,5 @@ python -m pytest -q
 - **Quarterly inputs:** BDC non-accruals and PIK, plus fund redemptions and gates, are filled by the weekly run around earnings season. ARCC doesn't break out PIK in its press release, so the 10-Q is needed. Two redemption figures are still marked "verify vs SC TO-I/A".
 - **Calendar dates** are approximate. Update `config/calendar.yaml` when official schedules are published.
 - **Replay coverage:** ICE BofA OAS history on FRED covers about 3 years, so the 2020 and 2023 stress episodes can't be replayed for spreads.
-- **Sonnet 5.5 check:** confirm the first Sonnet runs follow the runbook as well as Opus did: summary quality, sourced manual inputs, the full email with charts. Switch a task back in its settings if not.
+- **Sonnet 5.5 check (daily task):** confirm the first daily runs on Sonnet commit history correctly and, when alerting, send a complete email. Switch the task back to Opus in its settings if not.
 - **Optional:** tune thresholds after 4–6 weeks of history.
