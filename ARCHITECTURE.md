@@ -1,206 +1,207 @@
-# Credit Stress Tracker: Architecture & Plan
+# Credit Stress Tracker: Architecture
 
-Status: **v1.0, built and verified against live data** · 2026-11-20
-Source spec: `credit-stress-tracker-spec.md`
+Status: **v1, live.** Built and tested end to end on 2026-11-20 (manual weekly and daily runs, email received).
+Source spec: `credit-stress-tracker-spec.md` (the original brief). Operating instructions for scheduled runs: `RUNBOOK.md`.
 
-## Decisions (confirmed)
-- **Code and history:** a new private GitHub repo, `credit-stress-tracker`, that you create.
-- **Schedule:** a weekly report every Monday, arriving by 10:30 UK time, plus a daily red-alert check Tue–Sat at about 07:30 UK.
-- **Delivery:** HTML email through your connected Gmail account, sent to your own address.
-- **SEC EDGAR User-Agent:** your account email. It is sent only to sec.gov and read from the environment variable `SEC_CONTACT_EMAIL`, so it is never committed to the repo.
+> Monitoring tool only, not investment advice or a timing signal. Thresholds are rules of thumb.
 
 ---
 
 ## 1. What runs where
 
-The tracker runs as a **Claude Code cloud scheduled task**. Every run starts a fresh, temporary container, so nothing stays on disk between runs. The code, the config and the history all live in a **GitHub repo**. Each run clones the repo, computes the signals, sends the report and commits the new history rows back.
+The tracker runs as **Claude Code cloud scheduled tasks**. Every run starts a fresh, temporary container, so nothing stays on disk between runs. Code, config and history all live in this GitHub repo. Each run clones it, scores the signals, emails the report and commits the new history back to `main`.
 
 ```
- ┌──────────── Scheduled task (Mon 10:05 Europe/London) ─────────────┐
- │  fresh cloud session  →  clone repo  →  pip install (setup script) │
- │                                                                    │
- │  1. python -m tracker run --mode weekly      (deterministic core)  │
- │       fetch → validate/staleness → score → composite → render      │
- │       writes: out/report.html, out/report.md, out/run.json         │
- │                                                                    │
- │  2. Claude layer (judgement, per RUNBOOK.md)                       │
- │       • write the 3-line plain-English summary from run.json       │
- │       • web search: insurer downgrades, Fed facilities/cuts,       │
- │         non-traded BDC/private credit fund gates                   │
- │       • quarterly weeks: review EDGAR keyword-scan hits            │
- │                                                                    │
- │  3. Deliver: Gmail connector → email to you (HTML body)            │
- │  4. git commit data/*.csv + reports/YYYY-MM-DD.md → push           │
- └────────────────────────────────────────────────────────────────────┘
+ ┌────────── Scheduled task (fresh cloud session, env "credit-stress-tracker") ──────────┐
+ │ repo attached to the task  ·  Gmail connector attached  ·  setup script installs deps │
+ │                                                                                        │
+ │ 0. git pull · python -m pip install -r requirements.txt · reinstall Pillow             │
+ │ 1. python -m tracker run --mode weekly|daily     (deterministic Python core)           │
+ │      fetch → validate/staleness → score → composite → alerts → out/run.json            │
+ │ 2. Claude judgement (weekly only, per RUNBOOK.md)                                      │
+ │      • read the EDGAR hits (new filings first) → bank_disclosures                      │
+ │      • web search: insurer downgrades, Fed actions, fund gates, BDC Q figures          │
+ │      • record everything with sources in config/manual_inputs.yaml                     │
+ │ 3. out/summary.md: 3 plain-English lines (daily: only if there is an alert)            │
+ │ 4. python -m tracker finalize                                                          │
+ │      re-score with manual inputs → render HTML/text/markdown + 4 chart PNGs            │
+ │      → append data/*.csv → reports/<date>.md (weekly)                                  │
+ │ 5. Gmail send_message (weekly always; daily only on a new red / composite rise)        │
+ │      fallback: GitHub issue on this repo (GitHub emails the owner)                     │
+ │ 6. git commit data/ reports/ config/manual_inputs.yaml → push to main only             │
+ └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Why this split:** the numbers, thresholds and status colours come from plain Python, so they can be tested and repeated, and a run gives the same result whether or not Claude is involved. Claude handles the parts the spec leaves to judgement or news: the summary, insurer downgrades, Fed actions, fund gates, and reading filing snippets. Those parts would be fragile as code.
+**Why this split:** numbers, thresholds, colours, charts and alerts come from plain, tested Python, so the same data always gives the same result. Claude handles the judgement parts: the summary, reading filings, news on insurers, the Fed and fund gates, and sourcing quarterly BDC figures. Every value Claude adds must cite a source.
 
 ---
 
 ## 2. Schedule
 
-| Job | When | Cron (stored with `CRON_TZ=Europe/London`) | Notes |
+| Scheduled task | When (Europe/London) | Scope | Email |
 |---|---|---|---|
-| **Weekly full report** | Mon, starts 10:05, in your inbox by about 10:30 | `5 10 * * 1` | Covers Friday's H.8 (released Fri 16:15 ET) and Friday's market close. Uses the London zone, so BST/GMT changes are handled. |
-| Daily red-alert check *(optional, decision needed)* | Tue–Sat 07:xx London (after the US close) | `xx 7 * * 2-6` | Stage 2 and 4 only. Emails only when a signal turns red or the composite moves up a level; otherwise it stays silent. |
-| Quarterly items | inside the weekly report | n/a | An "Upcoming in the next 14 days" block lists SLOOS, bank/BDC earnings, the IMF GFSR and the Fed FSR, from `config/calendar.yaml`. |
+| **Credit Stress Weekly Report** | Mon 10:05, in the inbox by about 10:30 | All 4 stages, judgement and news checks, EDGAR scan | Always |
+| **Credit Stress Daily Check** | Tue–Sat 07:07, after the US close | Stages 2 and 4 only | Only on a new red signal or a composite rise |
 
-> The spec puts the weekly run on Friday evening. A Monday 10:30 UK report still has all of Friday's data, so nothing is lost. Its "1-week change" means Fri→Fri closes.
+- Both tasks start a new session per run in environment `credit-stress-tracker`. Each has the repo `augustasskiba/credit-stress-tracker` and the Gmail connector attached.
+- The cron uses the London zone, so BST and GMT changes are handled automatically.
+- Monday's report includes Friday's H.8 release (Fri 16:15 ET) and the Friday close. "1-week change" means Fri→Fri.
+- Quarterly reminders (SLOOS, bank and BDC earnings, IMF GFSR, Fed FSR) appear in the weekly email under "Coming up", from `config/calendar.yaml`.
 
 ---
 
-## 3. Data sources & network
+## 3. Cloud environment `credit-stress-tracker`
 
-The data hosts must be allowed in the cloud environment. **All of them are currently blocked** in your Default environment (checked: proxy 403 for every host below).
-
-| Source | Hosts | Auth | Used for |
-|---|---|---|---|
-| FRED (keyless CSV) | `fred.stlouisfed.org` | none | All FRED series via `fredgraph.csv?id=…` |
-| NY Fed Markets API | `markets.newyorkfed.org` | none | SOFR, TGCR, Standing Repo Facility results |
-| Yahoo (yfinance) | `query1.finance.yahoo.com`, `query2.finance.yahoo.com`, `fc.yahoo.com` | none | BIZD, BDC stocks, BKLN, KRE/KBE/XLF/SPY, TLT, GLD, ^VIX, ^MOVE |
-| SEC EDGAR | `data.sec.gov`, `www.sec.gov`, `efts.sec.gov` | none, but a User-Agent with contact info is **required** | BDC NAV/share via XBRL `companyconcept`, 10-Q full-text keyword scan |
-| Gmail | MCP connector | your connected account | Delivery |
-
-**FRED key decision:** use the keyless `fredgraph.csv` endpoint instead of the JSON API. The JSON API takes the key as a URL query parameter. The environment's secret store can only inject headers, so the key would have to sit in plain text in the environment. Keyless CSV avoids that. Staleness is checked from the date of the last observation, which is the check that matters. The JSON API can be added later if needed.
-
-**BDC NAV:** take it from EDGAR XBRL (`us-gaap:NetAssetValuePerShare`) rather than scanning 10-Q text for keywords. It is structured data, so it is reliable. Keyword scanning is kept for the Stage 3 disclosure terms only.
-
-**Proposed environment:** a new personal environment, `credit-stress-tracker`, with the hosts above, package managers on, and a setup script that runs `pip install -r requirements.txt`. It needs no secrets.
+| Setting | Value |
+|---|---|
+| Network | Unrestricted (set by the owner) |
+| Variables | `SEC_CONTACT_EMAIL`, read by the code for the SEC User-Agent. The address is never committed. |
+| Setup script | For both `python` and `python3`: `-m pip install` pandas, requests, yfinance, PyYAML, matplotlib, pytest, then `--ignore-installed pillow` |
+| Repositories | `augustasskiba/credit-stress-tracker` |
+| Pre-approved commands | `.claude/settings.json`: tracker, pytest, pip, git add/commit/pull/push to main, the GitHub-issue fallback, web search and fetch, Gmail send |
 
 ---
 
-## 4. Repo layout
+## 4. Data sources
+
+| Source | Access | Used for |
+|---|---|---|
+| FRED `fredgraph.csv` | Keyless CSV. **Standard client User-Agent only:** FRED drops custom ones | OAS spreads, H.8 NBFI loans, NBFI growth, SLOOS, IORB, NFCI/ANFCI, STLFSI |
+| NY Fed Markets API | No key | SOFR, TGCR, Standing Repo Facility results (daily accepted, $bn) |
+| Yahoo Finance (yfinance) | Unofficial; retried | BIZD, ARCC, OBDC, FSK, BXSL, BKLN, KRE, KBE, SPY, TLT, GLD, ^VIX, ^MOVE |
+| SEC EDGAR | User-Agent with `SEC_CONTACT_EMAIL` | XBRL `NetAssetValuePerShare` (BDC NAV, indexed by filing date); full-text keyword scan |
+| Web search (Claude) | Weekly runs | Insurer ratings, Fed actions, fund gates and redemptions, BDC quarterly figures |
+
+**Price conventions.** Price levels (P/NAV, VIX, MOVE) use **raw** closes. Dividend-adjusted closes would understate past BDC prices by every later dividend (about 10% a year). BIZD drawdown, BKLN 1-month, KRE/KBE vs SPY and forced selling use **total-return** (adjusted) closes, so distributions don't count as losses.
+
+---
+
+## 5. Repo layout
 
 ```
 credit-stress-tracker/
-├── RUNBOOK.md                 # what the scheduled Claude session does, step by step
+├── RUNBOOK.md                 # step-by-step instructions for the scheduled session
+├── ARCHITECTURE.md · README.md · CLAUDE.md
+├── .claude/settings.json      # pre-approved commands for unattended runs
+├── requirements.txt           # pandas, requests, yfinance, PyYAML, matplotlib, pytest
 ├── config/
-│   ├── signals.yaml           # every signal: id, source, series, transform, amber/red rule, max_age
-│   ├── composite.yaml         # composite-level rules (contained / spreading / systemic)
+│   ├── signals.yaml           # 29 signals: source, transform, amber/red rule, max_age_days
+│   ├── composite.yaml         # composite levels 0–3
 │   ├── calendar.yaml          # quarterly reminder dates
-│   └── manual_inputs.yaml     # you edit by hand: non-accruals, PIK %, redemptions/gates, Fed actions
+│   ├── manual_inputs.yaml     # quarterly BDC/fund figures, judgements, Fed actions (all sourced)
+│   └── settings.yaml          # history length, stale limit, EDGAR banks/insurers/keywords, repo_url
 ├── tracker/
-│   ├── sources/  fred.py  nyfed.py  yahoo.py  edgar.py   # one fetcher each, all return tidy pandas Series
-│   ├── calendar_utils.py      # US business days, month-end/quarter-end windows
-│   ├── transforms.py          # pct_from_52w_high, rel_perf_3m, growth_3m, spread_vs, persist_n_days …
-│   ├── rules.py               # generic threshold evaluator (gt/lt/persist/rising_n/count_in_window)
-│   ├── composite.py
-│   ├── history.py             # append + read data/*.csv
-│   ├── alerts.py              # diff vs. previous run → red transitions, composite escalation
-│   ├── render.py              # HTML email + markdown report (Jinja2)
-│   └── cli.py                 # verify | backfill | run --mode weekly|daily
+│   ├── sources/  http.py fred.py nyfed.py yahoo.py edgar.py
+│   ├── data.py               # DataStore: fetch once, record errors, cache to out/cache.pkl
+│   ├── signals.py            # build value series, score, staleness, changes, low-coverage warning
+│   ├── rules.py · composite.py · calendar_utils.py
+│   ├── history.py            # CSV history, alerts, EDGAR scan history and comparison
+│   ├── charts.py             # one small-multiples PNG per stage (matplotlib)
+│   ├── render.py             # e-mail HTML, plain text, markdown
+│   └── cli.py                # verify | run | finalize | replay
 ├── data/
-│   ├── observations.csv       # long format: date, signal_id, value, status, run_id
-│   └── runs.csv               # run_id, ts, mode, composite, stale_series, errors
-├── reports/2026-11-23.md      # archived weekly reports (readable on GitHub)
-└── tests/                     # rule-evaluator tests on fixture data
+│   ├── observations.csv       # one row per signal per run
+│   ├── runs.csv               # one row per run (composite, counts, fetch errors)
+│   ├── edgar_scan.csv         # keyword × group totals per weekly scan
+│   ├── edgar_hits.csv         # filings returned per scan (to find new ones)
+│   └── replay.csv             # threshold replay, weekly since Jan 2024
+├── reports/<date>.md          # weekly reports with full source links
+└── tests/test_rules.py        # 13 tests: rules, transforms, composite, EDGAR history, coverage
 ```
 
-**Storage decision:** append-only CSV committed to git, not SQLite. It is about 50 signals × 1 row per day, which comes to well under 1 MB a year. CSV diffs show on GitHub and stay readable there, while a binary SQLite file rewritten in git on every run would not. `history.py` can load it into SQLite or pandas when you want to query it.
+**History rules.** History is append-only across dates. Re-running `finalize` for the **same as-of date and mode** replaces that run's rows (and that day's EDGAR scan), so a repeated run never duplicates history. Earlier dates are never touched.
 
 ---
 
-## 5. Signal engine
+## 6. Signal engine
 
-The engine is driven by config, so thresholds never appear in code. Example `signals.yaml` entries:
+Every signal is defined in `config/signals.yaml`. No thresholds appear in code.
 
-```yaml
-- id: hy_oas
-  stage: 2
-  source: {type: fred, series: BAMLH0A0HYM2}
-  unit: bp            # FRED gives %, transform ×100
-  transform: {fn: scale, factor: 100}
-  rule: {op: gt, amber: 400, red: 500}
-  max_age_bdays: 3
+- **Rule language:** shorthand `{op, amber, red}`, or full lists of conditions with `gt/lt/ge/le`, `persist: N`, `count: N within: M`, `diff: N`, `rising: N` and `exclude: month_end`.
+- **Month-end and quarter-end repo spikes:** the window is the last business day of the month plus the first 2 business days after it. Breaches inside the window are flagged in a note but excluded from the persistence rules. Applies to SOFR–IORB, TGCR–IORB and SRF.
+- **Staleness:** each signal has a `max_age_days` (the weekly H.8 series gets 21, the monthly SLOOS 130, and so on). A stale signal shows grey and is excluded from the composite. If more than 25% of signals are stale, `run` exits 2 and the run sends a failure email instead of a misleading report.
+- **Stress direction:** each signal knows whether a rise or a fall means more stress, taken from its rule. The email colours change arrows by that direction: ▲▼ red = toward stress, green = away from it.
+- **Judgement signals:** `bank_disclosures` and `insurer_ratings` are set weekly by Claude in `manual_inputs.yaml`, with sources. They go stale after 10 days, which forces the weekly review.
+- **BDC non-accruals and PIK** (quarterly, `rising` 2 → amber, 3 → red): the value is a simple average of **whichever of ARCC, OBDC, FSK and BXSL have reported**. Each row records `n` and `bdcs`. Fewer than 3 of 4 raises a **low-coverage warning** in the data-issues box, in the plain-text email and in the summary. A quarter's row is updated as more BDCs report.
+- **Non-traded funds** are split into two signals: redemption requests above 5% of NAV → amber; gated 1 quarter → amber, 2 or more → red.
+- **Composite:** level 3 Systemic funding stress (2+ Stage-4 reds, or VIX, MOVE and HY OAS all red) → level 2 Spreading to banks (2+ Stage-3 reds, or SLOOS red plus a bank-stock red) → level 1 Contained grind (any Stage-1 or Stage-2 amber or worse) → level 0 Calm.
+- **Alerts:** a signal turning red (compared with the latest run of any mode) or the composite rising (compared with the last run of the same mode). The daily check sees only Stages 2 and 4, so its composite is compared only with earlier daily runs.
 
-- id: sofr_iorb
-  stage: 4
-  source: {type: spread, a: {type: nyfed, rate: sofr}, b: {type: fred, series: IORB}}
-  unit: bp
-  rule: {op: gt_persist, amber: 5, red: 15, days: 3, exclude: month_end_window}
+---
 
-- id: kre_vs_spy_3m
-  stage: 3
-  source: {type: rel_perf, a: KRE, b: SPY, window: 63}
-  rule: {op: lt, amber: -10, red: -20}
+## 7. EDGAR keyword scan
+
+- **What it scans:** each weekly run uses EDGAR full-text search over the last 30 days of 10-Q, 10-K and 8-K filings, separately for 18 banks and 9 life/annuity insurers. Keywords: fund finance, NAV loan, nondepository financial, fraud, charge-off, reserve build.
+- **What it stores:** keyword totals and the returned filings, saved in `data/edgar_scan.csv` and `data/edgar_hits.csv`.
+- **The comparison:** the report shows totals against the **previous scan** (▲▼ change) and lists **new filings**, meaning filings not among the top results of any earlier scan. Claude reads new filings first when it judges `bank_disclosures`.
+- **Limitation:** "new" is detected only among the top 10 results per keyword, so it can miss new filings for very common keywords such as "fraud".
+- **Baseline:** the 2026-11-20 scan. The first real comparison is Monday 23 Nov.
+
+---
+
+## 8. Report and email
+
+- **Email body (inline styles only):** Gmail drops `<style>` blocks. The layout is one centred column, 720px wide at most, with fixed table layouts and percentage column widths, so it fits a phone (checked at 390px).
+- **Content, top to bottom:**
+  - composite level "ladder";
+  - "This week" summary;
+  - new-red alerts and data issues;
+  - four stage tiles with red/amber/green counts;
+  - one section per stage: Value, Change (1-week change over 3-month change), Status pill;
+  - one chart image per stage: small multiples with shaded amber/red zones, labelled threshold lines, start and end dates, and an end dot in the status colour;
+  - Fed actions, the SEC filing keyword scan, coming-up dates, and a "Full report with sources on GitHub" button.
+- **Attachments:** the 4 stage PNGs go as inline attachments (`cid:att0..3`). The Gmail connector accepts at most 10 file attachments; per-signal charts (25) failed.
+- **No SEC links in the email (owner's choice):** the session's privacy guard refuses to send the owner's address alongside sec.gov links. Notes therefore say "[SEC filing links in the full report]", and `reports/<date>.md` keeps every link.
+- **Plain-text and markdown versions** keep Unicode sparklines as a fallback.
+- **Subject:** `🔴 ALERT · Credit Stress · <composite> · N red, N amber · <date>`, with `· ⚠ DATA ISSUE` added when signals are stale.
+
+---
+
+## 9. Lessons from the build (keep these in mind when changing things)
+
+| Problem | Cause | Fix |
+|---|---|---|
+| FRED requests hung | FRED drops unknown custom User-Agents | Standard `requests` UA for non-SEC hosts |
+| BDC P/NAV red in all of history | Adjusted closes understate past prices | Raw closes for price levels |
+| BIZD showed −19.7% | Price drawdown counts distributions as losses | Total-return drawdown (−9 to −10%) |
+| Scheduled run couldn't push (403) | Tasks don't inherit the environment's repo | Repo attached to each scheduled task |
+| `pandas` missing in scheduled run | `pip` belonged to Python 3.13, `python` was 3.11 | `python -m pip` everywhere |
+| Charts silently missing | System Pillow broken in the cloud image | Reinstall Pillow (setup script and runbook) |
+| Gmail rejected the send | More than 10 attachments | 4 stage images |
+| Gmail send blocked | Privacy guard: owner address plus sec.gov links | SEC links removed from email bodies only |
+| Email zoomed out, centred headers | `<style>` dropped; unbreakable URLs widened a table | Inline styles, fixed column, wrapped short links |
+| Stray `claude/*` branch | Scheduled sessions start on their own branch | Runbook: push to `main` only |
+
+---
+
+## 10. Cost and plan usage (measured 2026-11-20, Opus 5.5 list prices)
+
+| Run | API-equivalent | Drivers |
+|---|---|---|
+| Weekly report | ~$1.65–2.30 | Loading context (~50%) and writing out the ~53 KB email (~40%); more when sourcing quarterly BDC figures |
+| Daily check | ~$0.26 | Short run, no email unless alerting |
+| **Per week** | **~$3.00–3.60** | **≈ 1.0–1.3% of the Pro weekly limit**, up to ~6% of a 5-hour window on Monday morning |
+
+Effort level matters little here, because thinking is under 10% of output. Running both tasks on Sonnet 5.5 would roughly halve the cost.
+
+---
+
+## 11. Commands
+
+```bash
+python -m tracker verify                      # fetch every source once; non-zero exit if any fails
+python -m tracker run --mode weekly           # fetch + score → out/ (no history written)
+python -m tracker finalize                    # re-score with manual inputs, render, append history
+python -m tracker replay --start 2024-01-05   # score past Fridays → data/replay.csv
+python -m pytest -q
 ```
 
-Rule types cover the whole spec: `gt`/`lt`, `gt_persist` (N days), `rising_n_periods`, `change_over_window`, `count_in_window` (forced-selling days), `manual` (taken straight from the YAML).
-
-**Month-end and quarter-end repo spikes:** the last business day of a month or quarter and the first 2 business days after it are tagged `window=true`. A breach inside that window shows as amber with a "MEQ" flag and never triggers an alert. It counts toward red only if it lasts past the second business day after the window.
-
-**Freshness ("fail loudly"):** each signal has `max_age_bdays`. A stale or missing series is marked `STALE` in grey, listed at the top of the report, and the email subject gets `⚠ DATA ISSUE`. A run where more than 25% of series are stale exits non-zero, and Claude then emails a failure notice instead of a misleading report.
-
-**First run:** `tracker verify` fetches every series ID once and prints the last date and value for each. It exits non-zero on a 404 or an empty series. Several IDs in the spec need checking before anything is built on them (see §8).
-
 ---
 
-## 6. Report & alerts
+## 12. Open items
 
-- **Email subject:** `Credit Stress · Contained grind · 2 amber, 0 red · w/e 21 Nov`
-- **Top:** the composite level badge plus a 3-line summary that Claude writes from `run.json`.
-- **Per stage:** a table with columns Signal | Value | 1w Δ | 3m Δ | Status | Trend.
-- **Sparklines** are drawn as **Unicode blocks** (`▁▂▃▅▆▇`, last 13 weeks). Gmail removes inline SVG and often blocks images, while plain text always renders.
-- **Context sections:** Fed actions (manual YAML plus Claude's news check), Upcoming dates, Data issues.
-- The markdown copy goes into `reports/` in the repo.
-- **Alerts** (daily job, or the weekly job if daily is turned off) fire only on `status → red` or a composite escalation. The subject starts with `🔴`, and the body names the signal, its value, the threshold, and how long it has been in breach.
-- **Disclaimer footer:** "Monitoring tool, not investment advice."
-
----
-
-## 7. Build phases
-
-| # | Phase | Output | Done when |
-|---|---|---|---|
-| 0 | **Setup** | GitHub repo, cloud environment with hosts, Gmail connector check | `curl` reaches every host from a session |
-| 1 | **Fetchers + verify** | `sources/*`, `tracker verify` | every spec series resolves, or is replaced with a documented alternative |
-| 2 | **Backfill** | `tracker backfill --years 3` | history CSV holds 3 years, so 52w-high, 3m and 8w windows work from day one |
-| 3 | **Rules + composite** | `rules.py`, `composite.py`, tests | unit tests pass; a replay of Mar 2020, Sep–Oct 2022 and Mar 2023 (SVB) produces sensible colours |
-| 4 | **Render + history + alerts** | HTML/MD report, CSV append, diffing | a local dry run produces the report from live data |
-| 5 | **Claude layer** | `RUNBOOK.md` (summary, news checks, send email, commit) | one manual end-to-end run lands in your inbox |
-| 6 | **Schedule** | weekly scheduled task (and daily, if chosen) | the first scheduled email arrives Mon 10:30 |
-| 7 | **Tune** | adjust thresholds after 4–6 weeks | n/a |
-
-The Phase 3 replay doubles as a threshold sanity check. ICE BofA OAS history on FRED is limited to the most recent years, so the 2020 replay may need to use the spec's levels without a check against data.
-
----
-
-## 8. Phase 1 pre-check (run 2026-11-20, all sources reachable)
-
-| Check | Result |
-|---|---|
-| FRED: all 12 spec series IDs | ✅ all resolve. HY OAS 352 bp, CCC 1,353 bp (**red**), IG 94 bp, IORB 3.90, NFCI −0.48, STLFSI4 −0.87, VIXCLS 24.6 |
-| H.8 `LNFACBW027SBOG` | ✅ last obs 2026-11-04. The data lags about 2 weeks, so `max_age` must be 18 days or more |
-| `B1030NDMCMG` | ✅ 30.3% annualised (Oct) |
-| NY Fed SOFR / TGCR / repo ops | ✅ SOFR 3.91 (+1 bp vs IORB), TGCR 3.88. The repo ops endpoint is `/api/rp/repo/all/results/last/N.json` |
-| Yahoo: all 14 tickers incl. ^MOVE | ✅ (crumb 429 warning, harmless). ^VIX 29.7 intraday, ^MOVE 102 |
-| SEC XBRL NAV/share | ✅ ARCC NAV $19.31 (Q3 10-Q) vs price $18.60, so P/NAV 0.96 |
-
-**SEC contact:** a privacy guard here blocks me from writing your email address into code or commands. Put it in an environment variable `SEC_CONTACT_EMAIL` on the `credit-stress-tracker` environment (Settings → environment → variables). The code reads that variable and falls back to a generic UA.
-
-## 8a. Implementation notes (from the build)
-
-- **FRED User-Agents:** FRED drops requests that carry unknown custom User-Agents. Non-SEC hosts use the `requests` library's default UA.
-- **Yahoo prices:** dividend-adjusted closes push historical BDC prices down by every later dividend (about 10% a year). Price-level signals (P/NAV, VIX, MOVE) use **raw** closes. Return-based signals (BIZD drawdown, BKLN 1m, KRE/KBE vs SPY, forced selling) use **adjusted** total-return closes.
-- **Non-traded funds:** the redemption signal is split in two. `nontraded_redemptions` (requests > 5% → amber) and `nontraded_gates` (gated 1 qtr → amber, 2+ → red).
-- **Judgement signals:** `bank_disclosures` and `insurer_ratings` are set weekly by the Claude run in `manual_inputs.yaml`. They go STALE after 10 days, which forces the weekly review.
-- **Replay** (`data/replay.csv`, weekly from Jan 2024): composite was level 0 in 21 weeks and level 1 in 130. The level-1 weeks are driven mainly by FSK/OBDC P/NAV and BIZD, plus CCC OAS in 2026. FSK has traded below 0.90× NAV for most of the period. Consider a per-BDC baseline after a few weeks of data.
-
-## 8b. Remaining open items
-
-- **Series IDs that need checking on first run.** Fall back to the right H.8 / Z.1 series if any are wrong:
-  - `LNFACBW027SBOG`, `LNFACBM027SBOG` (H.8 loans to nondepository financial institutions)
-  - `B1030NDMCMG` (NBFI loan growth)
-- **CCC OAS series:** `BAMLH0A3HYC` is "CCC & lower", which is fine.
-- **`^MOVE` on Yahoo:** coverage can have gaps. If needed, fall back to flagging it stale. There is no good free alternative.
-- **SRF endpoint:** NY Fed `/api/rp/results/search.json` (operationType=repo). The filter needs confirming once the host is open.
-- **NFCI amber rule** ("rises > 0.25 in 8 weeks"): uses an 8-week change of the weekly series.
-- **SEC User-Agent:** EDGAR asks every client for a contact string. You decide what goes in it (see the questions).
-
----
-
-## 9. Cost & limits
-
-- One cloud session per week, about 5–10 minutes. The daily option adds 5 short sessions a week, mostly silent.
-- No paid APIs are used. yfinance is unofficial and Yahoo sometimes rate-limits it. Fetches retry 3 times with backoff, and a failure there marks only those signals stale.
+- **FSK P/NAV:** it has traded below 0.80× NAV for about half of the replay period, so it may stay red on its own. Keeping the spec threshold for now (owner's choice). Revisit with a per-BDC baseline after a few weeks of data.
+- **Quarterly inputs:** BDC non-accruals and PIK, plus fund redemptions and gates, are filled by the weekly run around earnings season. ARCC doesn't break out PIK in its press release, so the 10-Q is needed. Two redemption figures are still marked "verify vs SC TO-I/A".
+- **Calendar dates** are approximate. Update `config/calendar.yaml` when official schedules are published.
+- **Replay coverage:** ICE BofA OAS history on FRED covers about 3 years, so the 2020 and 2023 stress episodes can't be replayed for spreads.
+- **Optional:** move the scheduled tasks to Sonnet 5.5 to save cost; tune thresholds after 4–6 weeks of history.
