@@ -38,7 +38,7 @@ python -m tracker run --mode <weekly|daily>
 
 Edit `config/manual_inputs.yaml`. Set `as_of` to today's date (YYYY-MM-DD) for each judgement you review.
 
-**a. `judgements.bank_disclosures`.** Read `out/edgar_scan.json`. Open the most relevant hits for "fund finance", "NAV loan", "nondepository financial" and "reserve build" (at most about 6 filings). Ignore boilerplate "fraud" and "charge-off" language unless it is tied to lending to non-bank financials or private credit.
+**a. `judgements.bank_disclosures`.** Read `out/edgar_scan.json`, and in `out/run.json` look at `edgar_scan` → `new_items` (filings not seen in any earlier scan) first. Open the most relevant hits for "fund finance", "NAV loan", "nondepository financial" and "reserve build" (at most about 6 filings). Ignore boilerplate "fraud" and "charge-off" language unless it is tied to lending to non-bank financials or private credit.
   - `green`: nothing new beyond routine disclosure.
   - `amber`: new or expanded discussion of NBFI, fund-finance or private-credit exposure, or a reserve build attributed to it.
   - `red`: losses, charge-offs or fraud disclosed on NBFI or private-credit exposures.

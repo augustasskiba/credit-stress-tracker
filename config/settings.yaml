@@ -1,6 +1,7 @@
 history_years: 3          # how much source history to pull each run
 stale_fail_ratio: 0.25    # run exits non-zero if more than this share of signals is stale
 sparkline_points: 13
+repo_url: https://github.com/augustasskiba/credit-stress-tracker   # e-mail links to reports/<date>.md here
 edgar:
   # Banks scanned in EDGAR full-text search (tickers resolved to CIKs at run time)
   banks: [JPM, BAC, C, WFC, GS, MS, USB, PNC, TFC, COF, KEY, CFG, FITB, HBAN, RF, MTB, ZION, WAL]

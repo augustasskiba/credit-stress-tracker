@@ -82,3 +82,57 @@ def append_run(data_dir: Path, run_id: str, run_ts: str, mode: str, asof: str, r
         "n_stale": sum(r.status == "stale" for r in results),
         "errors": "; ".join(f"{k}: {v}" for k, v in errors.items())[:2000],
     }])
+
+
+# ---------------------------------------------------------------- EDGAR keyword scan history
+EDGAR_FIELDS = ["asof", "keyword", "group", "total"]
+HIT_FIELDS = ["asof", "keyword", "group", "company", "form", "filed", "url"]
+
+
+def _rewrite_without(path: Path, fields: list[str], asof: str):
+    rows = _read(path)
+    keep = [r for r in rows if r["asof"] != asof]
+    if len(keep) != len(rows):
+        with open(path, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(keep)
+
+
+def append_edgar(data_dir: Path, asof: str, scan: dict):
+    """Store keyword totals and the filings returned, one set per as-of date (a same-day re-run replaces it)."""
+    _rewrite_without(data_dir / "edgar_scan.csv", EDGAR_FIELDS, asof)
+    _rewrite_without(data_dir / "edgar_hits.csv", HIT_FIELDS, asof)
+    totals, hits = [], []
+    for kw, groups in (scan.get("keywords") or {}).items():
+        for g, v in groups.items():
+            totals.append({"asof": asof, "keyword": kw, "group": g, "total": v.get("total", 0)})
+            for i in v.get("items", []):
+                hits.append({"asof": asof, "keyword": kw, "group": g, **{k: i.get(k, "") for k in ("company", "form", "filed", "url")}})
+    _append(data_dir / "edgar_scan.csv", EDGAR_FIELDS, totals)
+    _append(data_dir / "edgar_hits.csv", HIT_FIELDS, hits)
+
+
+def previous_edgar(data_dir: Path, asof: str) -> dict | None:
+    """The latest scan before `asof`: {'asof', 'totals': {(kw, group): n}, 'seen': set of filing URLs seen in any earlier scan}."""
+    rows = [r for r in _read(data_dir / "edgar_scan.csv") if r["asof"] < asof]
+    if not rows:
+        return None
+    last = max(r["asof"] for r in rows)
+    totals = {(r["keyword"], r["group"]): int(r["total"]) for r in rows if r["asof"] == last}
+    seen = {r["url"] for r in _read(data_dir / "edgar_hits.csv") if r["asof"] < asof and r["url"]}
+    return {"asof": last, "totals": totals, "seen": seen}
+
+
+def compare_edgar(scan: dict, prev: dict | None) -> dict:
+    """Annotate a scan with prev_total / delta / new filings versus the previous scan (returns a copy)."""
+    import copy
+    out = copy.deepcopy(scan)
+    out["prev_asof"] = prev["asof"] if prev else None
+    for kw, groups in (out.get("keywords") or {}).items():
+        for g, v in groups.items():
+            pt = prev["totals"].get((kw, g)) if prev else None
+            v["prev_total"] = pt
+            v["delta"] = None if pt is None else v.get("total", 0) - pt
+            v["new_items"] = [i for i in v.get("items", []) if i.get("url") and i["url"] not in prev["seen"]] if prev else []
+    return out

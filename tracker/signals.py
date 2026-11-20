@@ -8,7 +8,7 @@ import pandas as pd
 
 from .calendar_utils import in_month_end_window
 from .data import DataStore
-from .rules import evaluate
+from .rules import evaluate, normalize_rule
 
 SPARK = "▁▂▃▄▅▆▇█"
 
@@ -29,6 +29,7 @@ class Result:
     error: str = ""
     history: list = field(default_factory=list)   # [(date, value)] last ~13 weekly points (text sparkline)
     chart: list = field(default_factory=list)     # [(date, value)] ~6 months daily, or last 12 obs (PNG chart)
+    direction: int = 0                            # +1: a rise means more stress, -1: a fall does, 0: unknown
 
     def to_dict(self):
         return asdict(self)
@@ -118,9 +119,20 @@ def _spark_points(s: pd.Series, n: int) -> pd.Series:
     return s.resample("W-FRI").last().dropna().tail(n)
 
 
+def stress_direction(rule: dict | None) -> int:
+    r = normalize_rule(rule or {})
+    for c in r["red"] + r["amber"]:
+        if "rising" in c or c.get("op") in ("gt", "ge"):
+            return 1
+        if c.get("op") in ("lt", "le"):
+            return -1
+    return 0
+
+
 # ---------------------------------------------------------------- scoring
 def score_signal(sig: dict, ds: DataStore, manual: dict, asof: dt.date, spark_n: int = 13) -> Result:
-    base = dict(id=sig["id"], stage=int(sig["stage"]), name=sig["name"], unit=sig.get("unit", ""))
+    base = dict(id=sig["id"], stage=int(sig["stage"]), name=sig["name"], unit=sig.get("unit", ""),
+                direction=stress_direction(sig.get("rule")))
     asof_ts = pd.Timestamp(asof)
     max_age = int(sig.get("max_age_days", 7))
     src = sig["source"]

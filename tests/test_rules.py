@@ -94,3 +94,32 @@ def test_composite_levels():
     assert composite([_r("x", 4, "red"), _r("y", 4, "red"), _r("a", 1, "amber")], CFG)["level"] == 3
     # stale never counts
     assert composite([_r("x", 4, "stale"), _r("y", 4, "red")], CFG)["level"] == 0
+
+
+def test_edgar_history_and_compare(tmp_path):
+    from tracker import history
+
+    def scan(total, urls):
+        items = [{"company": "Bank", "form": "10-Q", "filed": "2026-11-01", "url": u} for u in urls]
+        return {"lookback_days": 30, "keywords": {"NAV loan": {"banks": {"total": total, "items": items},
+                                                               "insurers": {"total": 0, "items": []}}}}
+
+    assert history.previous_edgar(tmp_path, "2026-11-20") is None
+    history.append_edgar(tmp_path, "2026-11-20", scan(2, ["u1", "u2"]))
+    history.append_edgar(tmp_path, "2026-11-20", scan(2, ["u1", "u2"]))   # same-day re-run replaces
+    prev = history.previous_edgar(tmp_path, "2026-11-27")
+    assert prev["asof"] == "2026-11-20" and prev["totals"][("NAV loan", "banks")] == 2 and prev["seen"] == {"u1", "u2"}
+    cmp = history.compare_edgar(scan(3, ["u2", "u3"]), prev)
+    b = cmp["keywords"]["NAV loan"]["banks"]
+    assert b["prev_total"] == 2 and b["delta"] == 1 and [i["url"] for i in b["new_items"]] == ["u3"]
+    assert cmp["prev_asof"] == "2026-11-20"
+    first = history.compare_edgar(scan(1, ["u9"]), None)
+    assert first["prev_asof"] is None and first["keywords"]["NAV loan"]["banks"]["delta"] is None
+
+
+def test_stress_direction():
+    from tracker.signals import stress_direction
+    assert stress_direction({"op": "gt", "amber": 1, "red": 2}) == 1
+    assert stress_direction({"op": "lt", "amber": 1, "red": 0}) == -1
+    assert stress_direction({"amber": [{"rising": 2}], "red": [{"rising": 3}]}) == 1
+    assert stress_direction(None) == 0

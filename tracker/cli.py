@@ -97,6 +97,13 @@ def build_run(ds: DataStore, mode: str, asof: dt.date, extra: dict | None = None
     }
     if extra:
         run.update(extra)
+    if run.get("edgar_scan"):
+        run["edgar_scan"] = history.compare_edgar(run["edgar_scan"], history.previous_edgar(DATA, asof.isoformat()))
+    run["composite_levels"] = [{"level": l["level"], "name": l["name"]}
+                               for l in sorted(load_yaml("composite.yaml")["levels"], key=lambda x: x["level"])]
+    repo = settings.get("repo_url", "").rstrip("/")
+    if repo:
+        run["report_url"] = f"{repo}/blob/main/reports/{asof.isoformat()}.md" if mode == "weekly" else repo
     return run
 
 
@@ -121,7 +128,7 @@ def write_outputs(run: dict):
     (OUT / "email.json").write_text(json.dumps({
         "should_send": should_send,
         "subject": render.subject(run),
-        "html": render.to_html(email_run, {i["id"]: f"cid:att{n}" for n, i in enumerate(imgs)}),
+        "html": render.to_html(email_run, {i["id"]: f"cid:att{n}" for n, i in enumerate(imgs)}, email=True),
         "text": render.email_safe(render.to_text(run)),
         "attachments": attachments,
     }, indent=2))
@@ -183,6 +190,8 @@ def cmd_finalize(args) -> int:
         from .signals import Result
         results = [Result(**r) for r in run["results"]]
         history.append_run(DATA, run_id, run_ts, meta["mode"], asof.isoformat(), results, run["composite"], ds.errors)
+        if run.get("edgar_scan"):
+            history.append_edgar(DATA, asof.isoformat(), run["edgar_scan"])
         if meta["mode"] == "weekly":
             REPORTS.mkdir(exist_ok=True)
             (REPORTS / f"{asof.isoformat()}.md").write_text(render.to_markdown(run))
