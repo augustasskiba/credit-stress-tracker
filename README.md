@@ -53,6 +53,6 @@ python -m pytest -q
 
 Claude Code cloud scheduled tasks run the tracker by following `RUNBOOK.md`:
 - **Weekly:** Monday 10:05 Europe/London.
-- **Daily red-alert check:** Tuesday to Saturday, 07:20 Europe/London.
+- **Daily red-alert check:** Tuesday to Saturday, 07:07 Europe/London (after the US close).
 
 `ARCHITECTURE.md` covers the design.

@@ -83,6 +83,15 @@ Read `out/email.json`.
 - Weekly runs always send. Daily runs send only when there is an alert.
 - **Failure email**: subject `⚠ Credit Stress Tracker run FAILED · <date>`, with the error output and the list of stale signals in the body.
 
+**Fallback if the Gmail tool is not available** (no `mcp__Gmail__send_message` in this session), or if sending fails:
+open a GitHub issue on the repo, and GitHub will e-mail the owner.
+
+```bash
+gh issue create --repo augustasskiba/credit-stress-tracker --title "<subject>" --body-file out/report.md
+```
+
+Use `reports/<date>.md` or the failure text as the body. Say in the final reply that the issue fallback was used instead of Gmail.
+
 ## 6. Commit history
 
 ```bash
