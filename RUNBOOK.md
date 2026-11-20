@@ -21,7 +21,7 @@ If the repo is not on disk, attach `augustasskiba/credit-stress-tracker` with pu
 
 ```bash
 git pull --ff-only origin main
-pip install -q -r requirements.txt
+python -m pip install -q -r requirements.txt   # not bare `pip`: it can belong to a different Python than `python`
 ```
 
 ## 1. Score

@@ -4,6 +4,7 @@
       "Bash(python -m tracker:*)",
       "Bash(python -m pytest:*)",
       "Bash(pip install:*)",
+      "Bash(python -m pip install:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",

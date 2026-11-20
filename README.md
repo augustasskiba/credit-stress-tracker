@@ -7,7 +7,7 @@ This tracker watches whether private-credit ("shadow debt") stress is spreading 
 ## Commands
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 Fetch every source and fail if any series is missing:
