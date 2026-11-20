@@ -76,6 +76,74 @@ def render(points: list, status: str, rule: dict, path: Path) -> bool:
     return True
 
 
+STAGE_COLS = 3
+PANEL_W_IN, PANEL_H_IN = 2.4, 0.95     # 3 panels across = 7.2 in = 720 CSS px in the e-mail
+
+
+def _draw_panel(ax, r: dict, rule: dict):
+    pts = r.get("chart") or []
+    name = r["name"] if len(r["name"]) <= 27 else r["name"][:26] + "…"
+    ax.set_title(name, loc="left", fontsize=7.2, color="#111827", pad=2)
+    ax.text(1.0, 1.02, f"{r.get('_value_text', '')}  {r['status']}", transform=ax.transAxes, ha="right",
+            va="bottom", fontsize=7.2, color="#111827", fontweight="bold")
+    ax.axis("off")
+    s = pd.Series([v for _, v in pts], index=pd.to_datetime([d for d, _ in pts]))
+    lo, hi = float(s.min()), float(s.max())
+    span = (hi - lo) or abs(hi) or 1.0
+    zones = _zones(rule)
+    for _, (op, v) in zones.items():
+        if lo - 0.6 * span <= v <= hi + 0.6 * span:
+            lo, hi = min(lo, v), max(hi, v)
+    pad = (hi - lo) * 0.12 or 0.5
+    y0, y1 = lo - pad, hi + pad
+    for st in ("amber", "red"):
+        if st in zones:
+            op, v = zones[st]
+            lo_b, hi_b = (v, y1) if op in ("gt", "ge") else (y0, v)
+            ax.axhspan(lo_b, hi_b, color=STATUS[st], alpha=0.16 if st == "amber" else 0.20, lw=0)
+            if y0 <= v <= y1:
+                ax.axhline(v, color=STATUS[st], lw=0.7)
+    dense = len(s) > 20
+    ax.plot(s.index, s.values, color=LINE, lw=1.1, marker=None if dense else "o", markersize=2)
+    ax.plot([s.index[-1]], [s.values[-1]], "o", color=STATUS.get(r["status"], LINE), markersize=5,
+            markeredgecolor="white", markeredgewidth=1.0, zorder=5)
+    ax.set_ylim(y0, y1)
+    ax.set_xlim(s.index[0], s.index[-1] + (s.index[-1] - s.index[0]) * 0.04)
+
+
+def render_stage(results: list[dict], rules: dict[str, dict], path: Path) -> bool:
+    """One small-multiples image per stage: a labelled panel per signal that has a series."""
+    rows_ = [r for r in results if len(r.get("chart") or []) >= 2]
+    if not rows_:
+        return False
+    n = len(rows_)
+    nrows = (n + STAGE_COLS - 1) // STAGE_COLS
+    fig, axes = plt.subplots(nrows, STAGE_COLS, figsize=(PANEL_W_IN * STAGE_COLS, PANEL_H_IN * nrows),
+                             dpi=100 * SCALE, squeeze=False)
+    for i, ax in enumerate(axes.flat):
+        if i < n:
+            _draw_panel(ax, rows_[i], rules.get(rows_[i]["id"], {}))
+        else:
+            ax.axis("off")
+    fig.subplots_adjust(left=0.01, right=0.99, top=1 - 0.28 / nrows, bottom=0.04, wspace=0.12, hspace=0.75)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=100 * SCALE, facecolor="white")
+    plt.close(fig)
+    return True
+
+
+def render_stages(results: list[dict], rules: dict[str, dict], out_dir: Path, value_fmt) -> list[dict]:
+    """One PNG per stage (at most 4 images, inside Gmail's 10-attachment limit). Returns [{id, path, sha256}]."""
+    out = []
+    for st in (1, 2, 3, 4):
+        rs = [dict(r, _value_text=value_fmt(r)) for r in results if r["stage"] == st]
+        p = out_dir / f"stage{st}.png"
+        if render_stage(rs, rules, p):
+            out.append({"id": f"stage{st}", "path": str(p.resolve()),
+                        "sha256": hashlib.sha256(p.read_bytes()).hexdigest()})
+    return out
+
+
 def render_all(results: list[dict], rules: dict[str, dict], out_dir: Path) -> list[dict]:
     """Render one PNG per signal with chart data. Returns [{id, path, sha256}] in table order."""
     out = []

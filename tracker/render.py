@@ -160,16 +160,22 @@ def to_html(run: dict, img_src: dict | None = None) -> str:
         rows = [r for r in run["results"] if r["stage"] == st]
         if not rows:
             continue
+        stage_img = img_src.get(f"stage{st}")
+        trend_th = "" if stage_img else "<th>Trend</th>"
         p.append(f"<h3>{e(title)}</h3><table><tr><th>Signal</th><th class=n>Value</th><th class=n>1w Δ</th>"
-                 "<th class=n>3m Δ</th><th>Status</th><th>Trend (6m)</th></tr>")
+                 f"<th class=n>3m Δ</th><th>Status</th>{trend_th}</tr>")
         for r in rows:
             c = _cls(r["status"])
             note = f'<div class="s">{e(r["note"])}</div>' if r["note"] and r["status"] != "stale" else ""
             asof = f'<div class="s">{e(r["last_date"])}</div>' if r["last_date"] else ""
             p.append(f'<tr><td>{e(r["name"])}{note}</td><td class=n>{e(fmt(r["value"], r["unit"]))}{asof}</td>'
                      f'<td class=n>{e(fmt(r["chg_1w"], r["unit"], True))}</td><td class=n>{e(fmt(r["chg_3m"], r["unit"], True))}</td>'
-                     f'<td class="nw {c}"><b>● {e(r["status"])}</b></td>{_trend_cell(r, c, img_src)}</tr>')
+                     f'<td class="nw {c}"><b>● {e(r["status"])}</b></td>{"" if stage_img else _trend_cell(r, c, img_src)}</tr>')
         p.append("</table>")
+        if stage_img:
+            p.append('<div class="s" style="margin:8px 0 2px">Trends, last 6 months (last 12 readings for monthly/quarterly series). '
+                     'Shaded bands are the amber/red zones; the dot is the latest value.</div>'
+                     f'<img src="{e(stage_img)}" width="720" alt="{e(title)} trend charts" style="display:block;max-width:100%;height:auto">')
     if run.get("fed_actions"):
         p.append("<h3>Fed / official actions</h3><ul>" +
                  "".join(f"<li>{e(str(x['date']))}: {e(x['action'])}</li>" for x in run["fed_actions"]) + "</ul>")

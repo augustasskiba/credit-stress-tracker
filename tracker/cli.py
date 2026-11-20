@@ -107,12 +107,12 @@ def write_outputs(run: dict):
     rules = {s["id"]: s.get("rule", {}) for s in load_yaml("signals.yaml")["signals"]}
     try:
         from . import charts
-        imgs = charts.render_all(run["results"], rules, OUT / "charts")
+        imgs = charts.render_stages(run["results"], rules, OUT / "charts", lambda r: render.fmt(r["value"], r["unit"]))
     except Exception as exc:  # noqa: BLE001  (charts are cosmetic; never fail the run over them)
         print(f"warning: chart rendering failed, using text sparklines: {exc}", file=sys.stderr)
         imgs = []
     (OUT / "report.html").write_text(render.to_html(run, {i["id"]: f"charts/{i['id']}.png" for i in imgs}))
-    # E-mail: inline PNGs referenced as cid:attN, N = position in `attachments`
+    # E-mail: one inline PNG per stage (Gmail allows at most 10 attachments), referenced as cid:attN by position
     attachments = [{"filename": f"{i['id']}.png", "mimeType": "image/png", "inline": True,
                     "content": f"sha256:{i['sha256']}:{i['path']}"} for i in imgs]
     should_send = run["mode"] == "weekly" or bool(run["alerts"])
