@@ -130,7 +130,17 @@ def _cls(status: str) -> str:
     return "na" if status == "n/a" else status
 
 
-def to_html(run: dict) -> str:
+def _trend_cell(r: dict, c: str, img_src: dict) -> str:
+    src = img_src.get(r["id"])
+    if src:
+        return f'<td class=nw><img src="{html.escape(src)}" width="180" height="40" alt="{html.escape(r["name"])} trend" style="display:block"></td>'
+    return f'<td class="sp {c}">{html.escape(r["spark"])}</td>'
+
+
+def to_html(run: dict, img_src: dict | None = None) -> str:
+    """img_src: signal id -> image URL (cid:attN for e-mail, charts/x.png for the local file).
+    Signals without an image fall back to the text sparkline."""
+    img_src = img_src or {}
     e = html.escape
     comp = run["composite"]
     lc = LEVEL_COLORS.get(comp["level"], "#374151")
@@ -151,14 +161,14 @@ def to_html(run: dict) -> str:
         if not rows:
             continue
         p.append(f"<h3>{e(title)}</h3><table><tr><th>Signal</th><th class=n>Value</th><th class=n>1w Δ</th>"
-                 "<th class=n>3m Δ</th><th>Status</th><th>Trend</th></tr>")
+                 "<th class=n>3m Δ</th><th>Status</th><th>Trend (6m)</th></tr>")
         for r in rows:
             c = _cls(r["status"])
             note = f'<div class="s">{e(r["note"])}</div>' if r["note"] and r["status"] != "stale" else ""
             asof = f'<div class="s">{e(r["last_date"])}</div>' if r["last_date"] else ""
             p.append(f'<tr><td>{e(r["name"])}{note}</td><td class=n>{e(fmt(r["value"], r["unit"]))}{asof}</td>'
                      f'<td class=n>{e(fmt(r["chg_1w"], r["unit"], True))}</td><td class=n>{e(fmt(r["chg_3m"], r["unit"], True))}</td>'
-                     f'<td class="nw {c}"><b>● {e(r["status"])}</b></td><td class="sp {c}">{e(r["spark"])}</td></tr>')
+                     f'<td class="nw {c}"><b>● {e(r["status"])}</b></td>{_trend_cell(r, c, img_src)}</tr>')
         p.append("</table>")
     if run.get("fed_actions"):
         p.append("<h3>Fed / official actions</h3><ul>" +

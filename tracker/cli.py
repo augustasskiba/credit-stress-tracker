@@ -104,13 +104,24 @@ def write_outputs(run: dict):
     OUT.mkdir(exist_ok=True)
     (OUT / "run.json").write_text(json.dumps(run, indent=2, default=str))
     (OUT / "report.md").write_text(render.to_markdown(run))
-    (OUT / "report.html").write_text(render.to_html(run))
+    rules = {s["id"]: s.get("rule", {}) for s in load_yaml("signals.yaml")["signals"]}
+    try:
+        from . import charts
+        imgs = charts.render_all(run["results"], rules, OUT / "charts")
+    except Exception as exc:  # noqa: BLE001  (charts are cosmetic; never fail the run over them)
+        print(f"warning: chart rendering failed, using text sparklines: {exc}", file=sys.stderr)
+        imgs = []
+    (OUT / "report.html").write_text(render.to_html(run, {i["id"]: f"charts/{i['id']}.png" for i in imgs}))
+    # E-mail: inline PNGs referenced as cid:attN, N = position in `attachments`
+    attachments = [{"filename": f"{i['id']}.png", "mimeType": "image/png", "inline": True,
+                    "content": f"sha256:{i['sha256']}:{i['path']}"} for i in imgs]
     should_send = run["mode"] == "weekly" or bool(run["alerts"])
     (OUT / "email.json").write_text(json.dumps({
         "should_send": should_send,
         "subject": render.subject(run),
-        "html": render.to_html(run),
+        "html": render.to_html(run, {i["id"]: f"cid:att{n}" for n, i in enumerate(imgs)}),
         "text": render.to_text(run),
+        "attachments": attachments,
     }, indent=2))
 
 

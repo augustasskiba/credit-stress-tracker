@@ -80,6 +80,7 @@ Read `out/email.json`.
   - `subject`: `subject`
   - `htmlBody`: `html`
   - `body`: `text`
+  - `attachments`: the `attachments` array from `out/email.json`, copied exactly and **in the same order**. These are the inline trend-chart PNGs: the HTML refers to them as `cid:att0`, `cid:att1`, … by position, and each `content` is a file reference the app fills in. If sending with attachments fails, send again without them; the text sparklines in `text` still go out.
 - Weekly runs always send. Daily runs send only when there is an alert.
 - **Failure email**: subject `⚠ Credit Stress Tracker run FAILED · <date>`, with the error output and the list of stale signals in the body.
 

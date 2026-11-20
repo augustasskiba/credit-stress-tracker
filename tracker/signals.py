@@ -27,7 +27,8 @@ class Result:
     spark: str = ""
     note: str = ""
     error: str = ""
-    history: list = field(default_factory=list)   # [(date, value)] last ~13 weeks, for charts
+    history: list = field(default_factory=list)   # [(date, value)] last ~13 weekly points (text sparkline)
+    chart: list = field(default_factory=list)     # [(date, value)] ~6 months daily, or last 12 obs (PNG chart)
 
     def to_dict(self):
         return asdict(self)
@@ -163,6 +164,8 @@ def score_signal(sig: dict, ds: DataStore, manual: dict, asof: dt.date, spark_n:
     v1w = _asof_value(s, last_date - pd.Timedelta(days=7))
     v3m = _asof_value(s, last_date - pd.Timedelta(days=91))
     pts = _spark_points(s, spark_n)
+    spacing = s.index.to_series().diff().dt.days.median() if len(s) > 2 else 1
+    chart_s = s.tail(12) if spacing and spacing > 10 else s[s.index >= last_date - pd.Timedelta(days=182)]
     return Result(
         **base,
         status=status,
@@ -173,6 +176,7 @@ def score_signal(sig: dict, ds: DataStore, manual: dict, asof: dt.date, spark_n:
         spark=sparkline(list(pts.values)),
         note=note,
         history=[(d.strftime("%Y-%m-%d"), round(float(v), 4)) for d, v in pts.items()],
+        chart=[(d.strftime("%Y-%m-%d"), round(float(v), 4)) for d, v in chart_s.items()],
     )
 
 
