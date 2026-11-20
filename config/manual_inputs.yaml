@@ -9,9 +9,12 @@
 # redemption_requests_pct: highest redemption-request % of NAV among large non-traded BDCs / interval funds
 # gated_quarters: consecutive quarters (to date) in which at least one large non-traded fund pro-rated / gated
 quarterly:
-  nonaccrual_pct: []
+  nonaccrual_pct:
+    - {date: 2026-06-30, value: 3.98, n: 4, bdcs: [ARCC, OBDC, FSK, BXSL], source: "At cost: ARCC 2.4% (https://www.sec.gov/Archives/edgar/data/1287750/000162828026050303/arccq2-2026exhibit991.htm); OBDC 2.8%, FSK 7.1%, BXSL 3.6% (June 30 comparatives in Q3 releases: https://www.sec.gov/Archives/edgar/data/1655888/000165588826000070/exhibit991pressrelease-ann.htm https://www.sec.gov/Archives/edgar/data/1422183/000110465926123011/tm2628917d1_ex99-1.htm https://www.sec.gov/Archives/edgar/data/1736035/000121390026115721/ea0310494-01_ex991.htm)"}
+    - {date: 2026-09-30, value: 3.63, n: 4, bdcs: [ARCC, OBDC, FSK, BXSL], source: "At cost: ARCC 2.4% (https://www.sec.gov/Archives/edgar/data/1287750/000162828026067382/arccq3-2026exhibit991.htm); OBDC 2.9% (https://www.sec.gov/Archives/edgar/data/1655888/000165588826000070/exhibit991pressrelease-ann.htm); FSK 6.4% (https://www.sec.gov/Archives/edgar/data/1422183/000110465926123011/tm2628917d1_ex99-1.htm); BXSL 2.8% (https://www.sec.gov/Archives/edgar/data/1736035/000121390026115721/ea0310494-01_ex991.htm)"}
   #  - {date: 2026-09-30, value: 1.9, source: "ARCC/OBDC/FSK/BXSL Q3 10-Qs"}
-  pik_pct: []
+  pik_pct:
+    - {date: 2026-09-30, value: 9.56, n: 3, bdcs: [OBDC, FSK, BXSL], source: "Q3 PIK interest / total investment income: OBDC $28.7m/$392.1m = 7.31% (https://www.sec.gov/Archives/edgar/data/1655888/000165588826000070/exhibit991pressrelease-ann.htm); FSK $46m/$294m = 15.65% (https://www.sec.gov/Archives/edgar/data/1422183/000110465926123011/tm2628917d1_ex99-1.htm); BXSL $18m/$315m = 5.71% (https://www.sec.gov/Archives/edgar/data/1736035/000121390026115721/ea0310494-01_ex991.htm). ARCC press release does not break out PIK (https://www.sec.gov/Archives/edgar/data/1287750/000162828026067382/arccq3-2026exhibit991.htm)"}
   redemption_requests_pct:
     - {date: 2026-03-31, value: 11.6, source: "Ares Strategic Income Fund Q1 requests 11.6% of NAV (ADS 11.2%), https://www.withintelligence.com/insights/apollo-and-ares-cap-redemptions-for-non-traded-bdcs/"}
     - {date: 2026-06-30, value: 16.8, source: "Apollo Debt Solutions prior-quarter requests 16.8% (reported), https://www.dealstreetasia.com/?p=495897 - verify vs SC TO-I/A"}

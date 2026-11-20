@@ -1,3 +1,3 @@
 run_id,run_ts,mode,asof,composite_level,composite_name,n_red,n_amber,n_stale,errors
 2026-11-20-daily-155009,2026-11-20T15:50:09Z,daily,2026-11-20,1,Contained grind,1,1,0,
-2026-11-20-weekly-172841,2026-11-20T17:28:41Z,weekly,2026-11-20,1,Contained grind,4,4,0,
+2026-11-20-weekly-184226,2026-11-20T18:42:26Z,weekly,2026-11-20,1,Contained grind,4,3,0,
