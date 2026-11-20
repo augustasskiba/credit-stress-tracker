@@ -120,86 +120,117 @@ def _context_md(run: dict) -> list[str]:
 
 
 # ------------------------------------------------------------------ HTML
-# Compact e-mail HTML: one <style> block (Gmail supports embedded CSS) + short class names.
-CSS = (
-    "body,.w{font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#111827;font-size:14px;line-height:1.45}"
-    ".w{max-width:760px}.m{color:#6b7280}.s{color:#9ca3af;font-size:11px}"
-    "h3{margin:18px 0 6px;font-size:15px}"
-    "table{border-collapse:collapse;width:100%;font-size:13px}"
-    "th{padding:5px 7px;text-align:left;border-bottom:1px solid #d1d5db;background:#f9fafb;color:#374151}"
-    "td{padding:5px 7px;border-bottom:1px solid #e5e7eb;vertical-align:top}"
-    ".n{text-align:right;white-space:nowrap}.nw{white-space:nowrap}"
-    ".sp{font-family:Menlo,Consolas,monospace;letter-spacing:-1px;white-space:nowrap}"
-    ".green{color:#1a7f37}.amber{color:#b7791f}.red{color:#c53030}.stale{color:#6b7280}.na{color:#9ca3af}"
-    ".box{padding:8px 12px;margin-bottom:14px;border-left:4px solid}.al{border-color:#c53030;background:#fef2f2}"
-    ".di{border-color:#6b7280;background:#f3f4f6}"
-    ".bd{display:inline-block;color:#fff;padding:6px 12px;border-radius:6px;font-weight:600}"
-)
+# E-mail HTML. Every element carries inline styles: Gmail drops <style> blocks in many views.
+# Layout is a single centred 720px column; nothing inside may force it wider (long URLs in notes
+# become short wrapped links), otherwise mail clients shrink the whole message to fit.
+FONT = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
+INK, MUTED, FAINT, RULE = "#111827", "#4b5563", "#6b7280", "#e5e7eb"
+TXT = {"green": "#1a7f37", "amber": "#9a6200", "red": "#c53030", "stale": "#6b7280", "n/a": "#6b7280"}
+# Cell styles stay short (font family/colour inherit from the wrapper cell) to keep the e-mail small.
+TH = "padding:6px 8px;border-bottom:1px solid #d1d5db;background:#f9fafb;color:#374151;font-size:12px;text-align:left"
+TD = f"padding:7px 8px;border-bottom:1px solid {RULE};vertical-align:top;font-size:13px"
+NUM = "text-align:right;white-space:nowrap"
+NOTE = f"color:{FAINT};font-size:11px;line-height:1.4;margin-top:2px;word-break:break-word;overflow-wrap:anywhere"
+H3 = f"margin:22px 0 6px;font-size:16px;color:{INK};{FONT}"
+_URL = re.compile(r"https?://[^\s<>\"')]+")
 
 
-def _cls(status: str) -> str:
-    return "na" if status == "n/a" else status
+def _note_html(text: str) -> str:
+    """Escape a note and turn each URL into a short 'domain' link that can wrap."""
+    out, last = [], 0
+    for m in _URL.finditer(text):
+        out.append(html.escape(text[last:m.start()]))
+        url = m.group(0).rstrip(".,;")
+        dom = re.sub(r"^https?://(www\.)?", "", url).split("/")[0]
+        out.append(f'<a href="{html.escape(url)}" style="color:{MUTED}">{html.escape(dom)}</a>')
+        last = m.start() + len(m.group(0))
+    out.append(html.escape(text[last:]))
+    return "".join(out)
 
 
-def _trend_cell(r: dict, c: str, img_src: dict) -> str:
+def _trend_cell(r: dict, img_src: dict) -> str:
     src = img_src.get(r["id"])
     if src:
-        return f'<td class=nw><img src="{html.escape(src)}" width="180" height="40" alt="{html.escape(r["name"])} trend" style="display:block"></td>'
-    return f'<td class="sp {c}">{html.escape(r["spark"])}</td>'
+        return f'<td style="{TD}"><img src="{html.escape(src)}" width="180" height="40" alt="" style="display:block"></td>'
+    return (f'<td style="{TD};font-family:Menlo,Consolas,monospace;letter-spacing:-1px;white-space:nowrap;'
+            f'color:{TXT.get(r["status"], MUTED)}">{html.escape(r["spark"])}</td>')
 
 
 def to_html(run: dict, img_src: dict | None = None) -> str:
-    """img_src: signal id -> image URL (cid:attN for e-mail, charts/x.png for the local file).
-    Signals without an image fall back to the text sparkline."""
+    """img_src: 'stage1'..'stage4' (or signal id) -> image URL (cid:attN in e-mail, charts/x.png locally).
+    Without an image a stage falls back to text sparklines."""
     img_src = img_src or {}
     e = html.escape
     comp = run["composite"]
     lc = LEVEL_COLORS.get(comp["level"], "#374151")
-    p = [f'<html><head><meta charset="utf-8"><style>{CSS}</style></head><body><div class="w">',
-         f'<h2 style="margin:0 0 4px">Credit Stress Tracker</h2>'
-         f'<div class="m" style="margin-bottom:12px">{e(run["mode"].title())} run · data as of {e(run["asof"])}</div>',
-         f'<div class="bd" style="background:{lc}">Composite: {e(comp["name"])} · level {comp["level"]}/3</div>',
-         "<ul>" + "".join(f"<li>{e(x)}</li>" for x in summary_lines(run)) + "</ul>"]
+    p = ['<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+         f'<body style="margin:0;padding:0;background:#ffffff;{FONT}">'
+         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:16px 12px">'
+         '<table role="presentation" width="720" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:720px;table-layout:fixed">'
+         f'<tr><td style="{FONT};color:{INK};font-size:14px;line-height:1.5;text-align:left">']
+    p.append(f'<div style="font-size:22px;font-weight:700;margin:0 0 2px">Credit Stress Tracker</div>'
+             f'<div style="color:{FAINT};font-size:13px;margin-bottom:12px">{e(run["mode"].title())} run · data as of {e(run["asof"])}</div>'
+             f'<div style="display:inline-block;background:{lc};color:#ffffff;padding:7px 14px;border-radius:6px;font-weight:600;font-size:14px">'
+             f'Composite: {e(comp["name"])} · level {comp["level"]}/3</div>')
+    p.append('<ul style="margin:14px 0 18px;padding-left:20px">' +
+             "".join(f'<li style="margin-bottom:6px">{e(x)}</li>' for x in summary_lines(run)) + "</ul>")
     if run["alerts"]:
-        p.append('<div class="box al"><b>🔴 Alerts</b><ul>' +
+        p.append('<div style="border-left:4px solid #c53030;background:#fef2f2;padding:10px 14px;margin-bottom:16px">'
+                 '<div style="font-weight:700;margin-bottom:4px">🔴 Alerts</div><ul style="margin:0;padding-left:20px">' +
                  "".join(f"<li>{e(_alert_text(a))}</li>" for a in run["alerts"]) + "</ul></div>")
     stale = [r for r in run["results"] if r["status"] == "stale"]
     if stale:
-        p.append('<div class="box di"><b>⚠ Data issues</b><ul>' +
+        p.append('<div style="border-left:4px solid #6b7280;background:#f3f4f6;padding:10px 14px;margin-bottom:16px">'
+                 '<div style="font-weight:700;margin-bottom:4px">⚠ Data issues</div><ul style="margin:0;padding-left:20px">' +
                  "".join(f"<li>{e(r['name'])}: {e(r['error'] or r['note'])}</li>" for r in stale) + "</ul></div>")
+
     for st, title in STAGES.items():
         rows = [r for r in run["results"] if r["stage"] == st]
         if not rows:
             continue
         stage_img = img_src.get(f"stage{st}")
-        trend_th = "" if stage_img else "<th>Trend</th>"
-        p.append(f"<h3>{e(title)}</h3><table><tr><th>Signal</th><th class=n>Value</th><th class=n>1w Δ</th>"
-                 f"<th class=n>3m Δ</th><th>Status</th>{trend_th}</tr>")
+        cols = ('<col><col style="width:84px"><col style="width:70px"><col style="width:70px"><col style="width:74px">'
+                + ("" if stage_img else '<col style="width:120px">'))
+        p.append(f'<div style="{H3}">{e(title)}</div>'
+                 f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;table-layout:fixed">'
+                 f'<colgroup>{cols}</colgroup><tr><th style="{TH}">Signal</th><th style="{TH};{NUM}">Value</th>'
+                 f'<th style="{TH};{NUM}">1w Δ</th><th style="{TH};{NUM}">3m Δ</th><th style="{TH}">Status</th>'
+                 + ("" if stage_img else f'<th style="{TH}">Trend</th>') + "</tr>")
         for r in rows:
-            c = _cls(r["status"])
-            note = f'<div class="s">{e(r["note"])}</div>' if r["note"] and r["status"] != "stale" else ""
-            asof = f'<div class="s">{e(r["last_date"])}</div>' if r["last_date"] else ""
-            p.append(f'<tr><td>{e(r["name"])}{note}</td><td class=n>{e(fmt(r["value"], r["unit"]))}{asof}</td>'
-                     f'<td class=n>{e(fmt(r["chg_1w"], r["unit"], True))}</td><td class=n>{e(fmt(r["chg_3m"], r["unit"], True))}</td>'
-                     f'<td class="nw {c}"><b>● {e(r["status"])}</b></td>{"" if stage_img else _trend_cell(r, c, img_src)}</tr>')
+            c = TXT.get(r["status"], MUTED)
+            note = (f'<div style="{NOTE}">{_note_html(r["note"])}</div>'
+                    if r["note"] and r["status"] != "stale" else "")
+            asof = f'<div style="color:{FAINT};font-size:11px">{e(r["last_date"])}</div>' if r["last_date"] else ""
+            p.append(f'<tr><td style="{TD};word-break:break-word">{e(r["name"])}{note}</td>'
+                     f'<td style="{TD};{NUM}">{e(fmt(r["value"], r["unit"]))}{asof}</td>'
+                     f'<td style="{TD};{NUM}">{e(fmt(r["chg_1w"], r["unit"], True))}</td>'
+                     f'<td style="{TD};{NUM}">{e(fmt(r["chg_3m"], r["unit"], True))}</td>'
+                     f'<td style="{TD};white-space:nowrap;color:{c};font-weight:600">● {e(r["status"])}</td>'
+                     + ("" if stage_img else _trend_cell(r, img_src)) + "</tr>")
         p.append("</table>")
         if stage_img:
-            p.append('<div class="s" style="margin:8px 0 2px">Trends, last 6 months (last 12 readings for monthly/quarterly series). '
-                     'Shaded bands are the amber/red zones; the dot is the latest value.</div>'
-                     f'<img src="{e(stage_img)}" width="720" alt="{e(title)} trend charts" style="display:block;max-width:100%;height:auto">')
+            p.append(f'<div style="color:{FAINT};font-size:11px;margin:10px 0 4px">Trends over the last 6 months '
+                     '(last 12 readings for monthly/quarterly series). Shaded bands are the amber/red zones; the dot is the latest value.</div>'
+                     f'<img src="{e(stage_img)}" width="720" alt="{e(title)} trend charts" '
+                     'style="display:block;width:100%;max-width:720px;height:auto;border:0">')
+
     if run.get("fed_actions"):
-        p.append("<h3>Fed / official actions</h3><ul>" +
+        p.append(f'<div style="{H3}">Fed / official actions</div><ul style="padding-left:20px">' +
                  "".join(f"<li>{e(str(x['date']))}: {e(x['action'])}</li>" for x in run["fed_actions"]) + "</ul>")
     if run.get("upcoming"):
-        p.append("<h3>Upcoming (next 14 days)</h3><ul>" +
+        p.append(f'<div style="{H3}">Upcoming (next 14 days)</div><ul style="padding-left:20px;margin-top:4px">' +
                  "".join(f"<li>{e(str(x['date']))}: {e(x['name'])}</li>" for x in run["upcoming"]) + "</ul>")
     scan = run.get("edgar_scan") or {}
     if scan.get("keywords"):
-        p.append(f'<h3>EDGAR keyword scan (filings in last {scan["lookback_days"]} days)</h3>'
-                 '<table style="width:auto"><tr><th>Keyword</th><th class=n>Banks</th><th class=n>Insurers</th></tr>' +
-                 "".join(f'<tr><td>{e(k)}</td><td class=n>{v["banks"]["total"]}</td><td class=n>{v["insurers"]["total"]}</td></tr>'
-                         for k, v in scan["keywords"].items()) + "</table>")
-    p.append(f'<p class="s" style="margin-top:20px">{e(DISCLAIMER)}</p></div></body></html>')
+        p.append(f'<div style="{H3}">EDGAR keyword scan <span style="color:{FAINT};font-weight:400;font-size:13px">'
+                 f'(filings in the last {scan["lookback_days"]} days)</span></div>'
+                 f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse">'
+                 f'<tr><th style="{TH}">Keyword</th><th style="{TH};{NUM}">Banks</th><th style="{TH};{NUM}">Insurers</th></tr>' +
+                 "".join(f'<tr><td style="{TD}">{e(k)}</td><td style="{TD};{NUM}">{v["banks"]["total"]}</td>'
+                         f'<td style="{TD};{NUM}">{v["insurers"]["total"]}</td></tr>' for k, v in scan["keywords"].items())
+                 + "</table>")
+    p.append(f'<p style="color:{FAINT};font-size:11px;margin-top:24px">{e(DISCLAIMER)}</p>'
+             "</td></tr></table></td></tr></table></body></html>")
     return "".join(p)
 
 

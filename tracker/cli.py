@@ -115,11 +115,13 @@ def write_outputs(run: dict):
     # E-mail: one inline PNG per stage (Gmail allows at most 10 attachments), referenced as cid:attN by position
     attachments = [{"filename": f"{i['id']}.png", "mimeType": "image/png", "inline": True,
                     "content": f"sha256:{i['sha256']}:{i['path']}"} for i in imgs]
+    # Notes go through email_safe before rendering, so SEC links never reach the e-mail (not even as link text).
+    email_run = {**run, "results": [{**r, "note": render.email_safe(r.get("note") or "")} for r in run["results"]]}
     should_send = run["mode"] == "weekly" or bool(run["alerts"])
     (OUT / "email.json").write_text(json.dumps({
         "should_send": should_send,
         "subject": render.subject(run),
-        "html": render.email_safe(render.to_html(run, {i["id"]: f"cid:att{n}" for n, i in enumerate(imgs)})),
+        "html": render.to_html(email_run, {i["id"]: f"cid:att{n}" for n, i in enumerate(imgs)}),
         "text": render.email_safe(render.to_text(run)),
         "attachments": attachments,
     }, indent=2))
