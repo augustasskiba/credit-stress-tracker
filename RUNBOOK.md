@@ -22,6 +22,7 @@ If the repo is not on disk, attach `augustasskiba/credit-stress-tracker` with pu
 ```bash
 git pull --ff-only origin main
 python -m pip install -q -r requirements.txt   # not bare `pip`: it can belong to a different Python than `python`
+python -m pip install -q --ignore-installed pillow   # the cloud image's system Pillow is broken; without this the charts silently drop out
 ```
 
 ## 1. Score
@@ -31,7 +32,7 @@ python -m tracker run --mode <weekly|daily>
 ```
 
 - Exit code `2` means more than 25% of signals are stale. Any other non-zero exit is a crash. In either case, send the **failure email** (step 5) with the error output, commit nothing, and stop.
-- Read `out/run.json`. Look at `composite`, `alerts`, `fetch_errors`, and the `results` with status `red`, `amber` or `stale`.
+- Read `out/run.json`. If `run`/`finalize` printed `warning: chart rendering failed`, the email will go out with text sparklines only; mention it in the final reply. Look at `composite`, `alerts`, `fetch_errors`, and the `results` with status `red`, `amber` or `stale`.
 
 ## 2. Judgement and news checks (**weekly only**; skip for daily)
 
