@@ -1,0 +1,36 @@
+# Composite reading. Levels are checked from the top; the first match wins.
+# Condition grammar:
+#   {stage_count: {stage: N, status: red|amber, min: K}}   K+ signals in stage at that status or worse
+#   {signal: {id: X, status: red|amber}}                   one signal at that status or worse
+#   {all_of: [cond, ...]} / {any_of: [cond, ...]}
+# STALE signals never count.
+
+levels:
+  - level: 3
+    name: Systemic funding stress
+    when:
+      any_of:
+        - {stage_count: {stage: 4, status: red, min: 2}}
+        - all_of:
+            - {signal: {id: vix, status: red}}
+            - {signal: {id: move, status: red}}
+            - {signal: {id: hy_oas, status: red}}
+  - level: 2
+    name: Spreading to banks
+    when:
+      any_of:
+        - {stage_count: {stage: 3, status: red, min: 2}}
+        - all_of:
+            - {signal: {id: sloos_ci, status: red}}
+            - any_of:
+                - {signal: {id: kre_vs_spy_3m, status: red}}
+                - {signal: {id: kbe_vs_spy_3m, status: red}}
+  - level: 1
+    name: Contained grind
+    when:
+      any_of:
+        - {stage_count: {stage: 1, status: amber, min: 1}}
+        - {stage_count: {stage: 2, status: amber, min: 1}}
+  - level: 0
+    name: Calm
+    when: always

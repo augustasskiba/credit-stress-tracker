@@ -1,0 +1,254 @@
+# Signal definitions. Thresholds live here, not in code.
+#
+# source types:
+#   fred      {series, scale}            FRED keyless CSV (scale: 100 turns % into bp)
+#   yahoo     {ticker, adjusted}         daily close; raw by default, adjusted: true = total return
+#   ratio     {a, b}                     total-return close a / close b (relative performance)
+#   nyfed     {rate: sofr|tgcr}          NY Fed reference rate, %
+#   spread    {a: <source>, b: <source>, scale}   a - b, b forward-filled onto a's dates
+#   srf       {}                         Standing Repo Facility accepted, $bn per day
+#   bdc_pnav  {ticker}                   price / latest reported NAV per share (SEC XBRL)
+#   forced_selling {tickers, threshold}  1 on days when all tickers fall more than threshold %
+#   manual    {key}                      quarterly series from config/manual_inputs.yaml
+#   judgement {key}                      status set by hand / by Claude in manual_inputs.yaml
+#
+# transform (applied in order): pct_change: N | diff: N | drawdown: N | rolling_sum: N | scale: k
+#
+# rule shorthand: {op: gt|lt|ge|le, amber: x, red: y}
+# full form:     {amber: [cond, ...], red: [cond, ...]}   (any cond true -> that status)
+#   cond: {op, value, diff: N, persist: N, count: N, within: M, exclude: month_end, rising: N}
+#
+# max_age_days: older than this (vs. run date) -> STALE (grey, excluded from composite)
+
+signals:
+  # ---------------- Stage 1: inside private credit ----------------
+  - id: bizd_drawdown
+    stage: 1
+    name: BDC ETF (BIZD) from 52w high
+    unit: "%"
+    source: {type: yahoo, ticker: BIZD}
+    transform: [{drawdown: 252}]
+    rule: {op: lt, amber: -10, red: -20}
+    max_age_days: 5
+
+  - id: arcc_pnav
+    stage: 1
+    name: ARCC price / NAV
+    unit: x
+    source: {type: bdc_pnav, ticker: ARCC}
+    rule: {op: lt, amber: 0.90, red: 0.80}
+    max_age_days: 5
+  - id: obdc_pnav
+    stage: 1
+    name: OBDC price / NAV
+    unit: x
+    source: {type: bdc_pnav, ticker: OBDC}
+    rule: {op: lt, amber: 0.90, red: 0.80}
+    max_age_days: 5
+  - id: fsk_pnav
+    stage: 1
+    name: FSK price / NAV
+    unit: x
+    source: {type: bdc_pnav, ticker: FSK}
+    rule: {op: lt, amber: 0.90, red: 0.80}
+    max_age_days: 5
+  - id: bxsl_pnav
+    stage: 1
+    name: BXSL price / NAV
+    unit: x
+    source: {type: bdc_pnav, ticker: BXSL}
+    rule: {op: lt, amber: 0.90, red: 0.80}
+    max_age_days: 5
+
+  - id: bdc_nonaccruals
+    stage: 1
+    name: BDC non-accruals (% of portfolio at cost)
+    unit: "%"
+    source: {type: manual, key: nonaccrual_pct}
+    rule: {amber: [{rising: 2}], red: [{rising: 3}]}
+    max_age_days: 150
+  - id: bdc_pik
+    stage: 1
+    name: BDC PIK income share
+    unit: "%"
+    source: {type: manual, key: pik_pct}
+    rule: {amber: [{rising: 2}], red: [{rising: 3}]}
+    max_age_days: 150
+  - id: nontraded_redemptions
+    stage: 1
+    name: Non-traded fund redemption requests (max, % of NAV)
+    unit: "%"
+    source: {type: manual, key: redemption_requests_pct}
+    rule: {op: gt, amber: 5, red: 999}
+    max_age_days: 150
+  - id: nontraded_gates
+    stage: 1
+    name: Non-traded funds gated (consecutive quarters)
+    unit: qtrs
+    source: {type: manual, key: gated_quarters}
+    rule: {op: ge, amber: 1, red: 2}
+    max_age_days: 150
+
+  # ---------------- Stage 2: credit markets ----------------
+  - id: hy_oas
+    stage: 2
+    name: High-yield OAS
+    unit: bp
+    source: {type: fred, series: BAMLH0A0HYM2, scale: 100}
+    rule: {op: gt, amber: 400, red: 500}
+    max_age_days: 5
+  - id: ccc_oas
+    stage: 2
+    name: CCC & lower OAS
+    unit: bp
+    source: {type: fred, series: BAMLH0A3HYC, scale: 100}
+    rule: {op: gt, amber: 900, red: 1200}
+    max_age_days: 5
+  - id: ig_oas
+    stage: 2
+    name: Investment-grade OAS
+    unit: bp
+    source: {type: fred, series: BAMLC0A0CM, scale: 100}
+    rule: {op: gt, amber: 130, red: 175}
+    max_age_days: 5
+  - id: bkln_1m
+    stage: 2
+    name: Leveraged loan ETF (BKLN) 1-month return
+    unit: "%"
+    source: {type: yahoo, ticker: BKLN, adjusted: true}   # total return: BKLN pays monthly
+    transform: [{pct_change: 21}]
+    rule: {op: lt, amber: -3, red: -6}
+    max_age_days: 5
+
+  # ---------------- Stage 3: transmission to banks & insurers ----------------
+  - id: bank_nbfi_loans_3m
+    stage: 3
+    name: Bank loans to nondepository financials, 3m change (H.8 weekly)
+    unit: "%"
+    source: {type: fred, series: LNFACBW027SBOG}
+    transform: [{pct_change: 13}]
+    rule: {op: lt, amber: 0, red: -3}
+    max_age_days: 21          # H.8 weekly data lags ~2 weeks
+  - id: nbfi_loan_growth
+    stage: 3
+    name: NBFI loan growth, domestic banks (annualised)
+    unit: "%"
+    source: {type: fred, series: B1030NDMCMG}
+    rule: {op: lt, amber: 5, red: 0}
+    max_age_days: 70
+  - id: sloos_ci
+    stage: 3
+    name: SLOOS net % tightening C&I standards
+    unit: "%"
+    source: {type: fred, series: DRTSCILM}
+    rule: {op: gt, amber: 20, red: 40}
+    max_age_days: 130
+  - id: kre_vs_spy_3m
+    stage: 3
+    name: Regional banks vs S&P 500 (KRE/SPY, 3m)
+    unit: "%"
+    source: {type: ratio, a: KRE, b: SPY}
+    transform: [{pct_change: 63}]
+    rule: {op: lt, amber: -10, red: -20}
+    max_age_days: 5
+  - id: kbe_vs_spy_3m
+    stage: 3
+    name: Banks vs S&P 500 (KBE/SPY, 3m)
+    unit: "%"
+    source: {type: ratio, a: KBE, b: SPY}
+    transform: [{pct_change: 63}]
+    rule: {op: lt, amber: -8, red: -15}
+    max_age_days: 5
+  - id: bank_disclosures
+    stage: 3
+    name: Bank / insurer filing disclosures (EDGAR scan, reviewed)
+    unit: ""
+    source: {type: judgement, key: bank_disclosures}
+    max_age_days: 10
+  - id: insurer_ratings
+    stage: 3
+    name: Life / annuity insurer downgrades (news, reviewed)
+    unit: ""
+    source: {type: judgement, key: insurer_ratings}
+    max_age_days: 10
+
+  # ---------------- Stage 4: funding stress ----------------
+  - id: sofr_iorb
+    stage: 4
+    name: SOFR minus IORB
+    unit: bp
+    source: {type: spread, a: {type: nyfed, rate: sofr}, b: {type: fred, series: IORB}, scale: 100}
+    rule:
+      amber: [{op: gt, value: 5, persist: 3, exclude: month_end}]
+      red: [{op: gt, value: 15, persist: 3, exclude: month_end}]
+    flag_month_end: 5
+    max_age_days: 5
+  - id: tgcr_iorb
+    stage: 4
+    name: TGCR minus IORB
+    unit: bp
+    source: {type: spread, a: {type: nyfed, rate: tgcr}, b: {type: fred, series: IORB}, scale: 100}
+    rule:
+      amber: [{op: gt, value: 5, persist: 3, exclude: month_end}]
+      red: [{op: gt, value: 15, persist: 3, exclude: month_end}]
+    flag_month_end: 5
+    max_age_days: 5
+  - id: srf_takeup
+    stage: 4
+    name: Standing Repo Facility take-up
+    unit: $bn
+    source: {type: srf}
+    rule:
+      amber: [{op: gt, value: 10, exclude: month_end}]
+      red: [{op: gt, value: 25, count: 3, within: 10}]
+    flag_month_end: 10
+    max_age_days: 5
+  - id: nfci
+    stage: 4
+    name: Chicago Fed NFCI
+    unit: ""
+    source: {type: fred, series: NFCI}
+    rule:
+      amber: [{op: gt, value: 0.25, diff: 8}]
+      red: [{op: gt, value: 0}]
+    max_age_days: 12
+  - id: anfci
+    stage: 4
+    name: Chicago Fed adjusted NFCI
+    unit: ""
+    source: {type: fred, series: ANFCI}
+    rule:
+      amber: [{op: gt, value: 0.25, diff: 8}]
+      red: [{op: gt, value: 0}]
+    max_age_days: 12
+  - id: stlfsi
+    stage: 4
+    name: St. Louis Fed Financial Stress Index
+    unit: ""
+    source: {type: fred, series: STLFSI4}
+    rule: {op: gt, amber: 0, red: 1}
+    max_age_days: 12
+  - id: vix
+    stage: 4
+    name: VIX
+    unit: ""
+    source: {type: yahoo, ticker: "^VIX"}
+    rule:
+      amber: [{op: gt, value: 25}]
+      red: [{op: gt, value: 30, persist: 5}]
+    max_age_days: 5
+  - id: move
+    stage: 4
+    name: MOVE (Treasury vol)
+    unit: ""
+    source: {type: yahoo, ticker: "^MOVE"}
+    rule: {op: gt, amber: 120, red: 150}
+    max_age_days: 5
+  - id: forced_selling
+    stage: 4
+    name: Forced-selling days (SPY, TLT, GLD all < -1%), last 10 days
+    unit: days
+    source: {type: forced_selling, tickers: [SPY, TLT, GLD], threshold: -1}
+    transform: [{rolling_sum: 10}]
+    rule: {op: ge, amber: 1, red: 3}
+    max_age_days: 5

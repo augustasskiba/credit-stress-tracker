@@ -1,0 +1,11 @@
+history_years: 3          # how much source history to pull each run
+stale_fail_ratio: 0.25    # run exits non-zero if more than this share of signals is stale
+sparkline_points: 13
+edgar:
+  # Banks scanned in EDGAR full-text search (tickers resolved to CIKs at run time)
+  banks: [JPM, BAC, C, WFC, GS, MS, USB, PNC, TFC, COF, KEY, CFG, FITB, HBAN, RF, MTB, ZION, WAL]
+  insurers: [ATH, CRBG, EQH, FG, LNC, PRU, MET, BHF, JXN]
+  keywords: ["fund finance", "NAV loan", "nondepository financial", "fraud", "charge-off", "reserve build"]
+  lookback_days: 30
+  forms: [10-Q, 10-K, 8-K]
+# SEC requires a contact in the User-Agent. Read from the SEC_CONTACT_EMAIL environment variable.

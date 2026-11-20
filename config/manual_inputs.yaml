@@ -1,0 +1,30 @@
+# Hand-maintained inputs. Edit by hand, or let the scheduled Claude run update them
+# (it must cite a source in `note` / `source` for every value it adds).
+
+# Quarterly series. One row per quarter-end date. Leave empty until you have real numbers.
+# nonaccrual_pct: weighted-average non-accruals at cost across ARCC, OBDC, FSK, BXSL
+# pik_pct:        PIK income as % of total investment income, same group
+# redemption_requests_pct: highest redemption-request % of NAV among large non-traded BDCs / interval funds
+# gated_quarters: consecutive quarters (to date) in which at least one large non-traded fund pro-rated / gated
+quarterly:
+  nonaccrual_pct: []
+  #  - {date: 2026-09-30, value: 1.9, source: "ARCC/OBDC/FSK/BXSL Q3 10-Qs"}
+  pik_pct: []
+  redemption_requests_pct: []
+  gated_quarters: []
+
+# Judgement signals: status is green | amber | red. Refresh weekly (they go STALE after max_age_days).
+judgements:
+  bank_disclosures:
+    status: null
+    as_of: null
+    note: "Not reviewed yet."
+  insurer_ratings:
+    status: null
+    as_of: null
+    note: "Not reviewed yet."
+
+# Fed / official-sector interventions (new facility, emergency cut, etc.). Shown in the report.
+# They reduce severity but never auto-clear signals.
+fed_actions: []
+#  - {date: 2026-11-20, action: "Example: Fed announces ...", source: "https://..."}

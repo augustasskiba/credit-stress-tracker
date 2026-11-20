@@ -1,0 +1,20 @@
+# Quarterly / periodic reminders shown in the weekly report ("Upcoming in the next 14 days").
+# Dates are approximate; update them as official calendars are published.
+events:
+  - {date: 2026-11-21, name: Fed Financial Stability Report (fall) - check if published}
+  - {date: 2027-01-14, name: Big-bank Q4 earnings start (JPM, C, WFC, BAC)}
+  - {date: 2027-02-02, name: SLOOS (January survey) release}
+  - {date: 2027-02-24, name: BDC Q4 earnings / 10-K season (ARCC, OBDC, FSK, BXSL) - update manual_inputs.yaml}
+  - {date: 2027-04-14, name: Big-bank Q1 earnings start}
+  - {date: 2027-04-14, name: IMF Global Financial Stability Report (spring)}
+  - {date: 2027-04-24, name: Fed Financial Stability Report (spring)}
+  - {date: 2027-05-04, name: SLOOS (April survey) release}
+  - {date: 2027-05-05, name: BDC Q1 earnings / 10-Q season - update manual_inputs.yaml}
+  - {date: 2027-07-14, name: Big-bank Q2 earnings start}
+  - {date: 2027-08-03, name: SLOOS (July survey) release}
+  - {date: 2027-08-04, name: BDC Q2 earnings / 10-Q season - update manual_inputs.yaml}
+  - {date: 2027-10-13, name: Big-bank Q3 earnings start}
+  - {date: 2027-10-14, name: IMF Global Financial Stability Report (fall)}
+  - {date: 2027-11-02, name: SLOOS (October survey) release}
+  - {date: 2027-11-03, name: BDC Q3 earnings / 10-Q season - update manual_inputs.yaml}
+  - {date: 2027-11-12, name: Fed Financial Stability Report (fall)}
