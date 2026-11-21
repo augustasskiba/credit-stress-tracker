@@ -1,7 +1,6 @@
 # Quarterly / periodic reminders shown in the weekly report ("Upcoming in the next 14 days").
 # Dates are approximate; update them as official calendars are published.
 events:
-  - {date: 2026-11-21, name: Fed Financial Stability Report (fall) - check if published}
   - {date: 2027-01-14, name: Big-bank Q4 earnings start (JPM, C, WFC, BAC)}
   - {date: 2027-02-02, name: SLOOS (January survey) release}
   - {date: 2027-02-24, name: BDC Q4 earnings / 10-K season (ARCC, OBDC, FSK, BXSL) - update manual_inputs.yaml}
