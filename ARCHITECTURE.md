@@ -1,6 +1,6 @@
 # Credit Stress Tracker: Architecture
 
-Status: **v1, live.** Built and tested end to end on 2026-11-20 and 2026-11-21 (manual weekly runs on Opus 5.5 and daily runs on Sonnet 5.5, email received). Last doc update: 2026-11-21.
+Status: **v1, live.** Built and tested end to end on 2026-11-20 and 2026-11-21 (manual weekly runs on Opus 5.5 and daily runs on Sonnet 5.5, email received). The first scheduled daily check ran on 2026-11-21 at 07:07. Last doc update: 2026-11-21.
 Source spec: `credit-stress-tracker-spec.md` (the original brief). Operating instructions for scheduled runs: `RUNBOOK.md`.
 
 > Monitoring tool only, not investment advice or a timing signal. Thresholds are rules of thumb.
@@ -15,7 +15,7 @@ The tracker runs as **Claude Code cloud scheduled tasks**. Every run starts a fr
  ┌────────── Scheduled task (fresh cloud session, env "credit-stress-tracker") ──────────┐
  │ repo attached to the task  ·  Gmail connector attached  ·  setup script installs deps │
  │                                                                                        │
- │ 0. git pull · python -m pip install -r requirements.txt · reinstall Pillow             │
+ │ 0. git checkout -B main origin/main · pip install -r requirements.txt · Pillow         │
  │ 1. python -m tracker run --mode weekly|daily     (deterministic Python core)           │
  │      fetch → validate/staleness → score → composite → alerts → out/run.json            │
  │ 2. Claude judgement (weekly only, per RUNBOOK.md)                                      │
@@ -28,7 +28,7 @@ The tracker runs as **Claude Code cloud scheduled tasks**. Every run starts a fr
  │      → append data/*.csv → reports/<date>.md (weekly)                                  │
  │ 5. Gmail send_message (weekly always; daily only on a new red / composite rise)        │
  │      fallback: GitHub issue on this repo (GitHub emails the owner)                     │
- │ 6. git commit data/ reports/ config/manual_inputs.yaml → push to main only             │
+ │ 6. git commit data/ reports/ config/{manual_inputs,calendar}.yaml → push to main only  │
  │ 7. final reply ends with the status line (see below)                                   │
  └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -40,6 +40,14 @@ The tracker runs as **Claude Code cloud scheduled tasks**. Every run starts a fr
 ```
 
 If the run replies again (for example after a git hook nudges it to push its session branch, which it must decline), that reply ends with the same line.
+
+**Working on `main`.** Sessions start on an auto-named `claude/*` branch. The runbook's first step switches to `main` (`git fetch origin main && git checkout -B main origin/main`), so commits land on `main` directly. Since this change, the git hook no longer asks to push a session branch.
+
+**Runbook rules added 2026-11-21:**
+- Never work around a safety or privacy guard; use the documented fallback and report it.
+- Insurer actions count only if dated in the last 7 days. An older action no earlier week recorded may be counted once, with a note.
+- Coming-up items that have already happened are removed from `config/calendar.yaml`.
+- `finalize` may be re-run (it replaces that day's rows). The run checks the subject and summary before sending.
 
 **Why this split:** numbers, thresholds, colours, charts and alerts come from plain, tested Python, so the same data always gives the same result. Claude handles the judgement parts: the summary, reading filings, news on insurers, the Fed and fund gates, and sourcing quarterly BDC figures. Every value Claude adds must cite a source.
 
@@ -67,7 +75,7 @@ If the run replies again (for example after a git hook nudges it to push its ses
 | Variables | `SEC_CONTACT_EMAIL`, read by the code for the SEC User-Agent. The address is never committed. |
 | Setup script | For both `python` and `python3`: `-m pip install` pandas, requests, yfinance, PyYAML, matplotlib, pytest, then `--ignore-installed pillow` |
 | Repositories | `augustasskiba/credit-stress-tracker` |
-| Pre-approved commands | `.claude/settings.json`: tracker, pytest, pip, git add/commit/pull/push to main, the GitHub-issue fallback, web search and fetch, Gmail send |
+| Pre-approved commands | `.claude/settings.json`: tracker, pytest, pip, git add/commit/pull/fetch/checkout and push to main, the GitHub-issue fallback, web search and fetch, Gmail send |
 
 ---
 
@@ -179,7 +187,7 @@ Every signal is defined in `config/signals.yaml`. No thresholds appear in code.
 | Gmail rejected the send | More than 10 attachments | 4 stage images |
 | Gmail send blocked | Privacy guard: owner address plus sec.gov links | SEC links removed from email bodies only |
 | Email zoomed out, centred headers | `<style>` dropped; unbreakable URLs widened a table | Inline styles, fixed column, wrapped short links |
-| Stray `claude/*` branch | Scheduled sessions start on their own branch; a git hook nudges them to push it | Runbook and prompts: push to `main` only, decline the hook |
+| Stray `claude/*` branch | Scheduled sessions start on their own branch; a git hook nudges them to push it | Runbook and prompts: switch to `main` first, push to `main` only, decline the hook |
 | Final reply ended without the status line | A hook-reply became the last message | Status line required as the last line of every reply |
 
 ---
@@ -191,7 +199,7 @@ Measured on test runs on 2026-11-20 and 2026-11-21, at list prices. The weekly r
 | Run | API-equivalent | Drivers |
 |---|---|---|
 | Weekly report (Opus 5.5) | ~$1.65–2.30 (last test $2.03) | Loading context (~50%) and writing out the ~53 KB email (~40%); more when sourcing quarterly BDC figures |
-| Daily check (Sonnet 5.5) | ~$0.12–0.13 (Opus was ~$0.26) | Short run, no email unless alerting |
+| Daily check (Sonnet 5.5) | ~$0.12–0.13 (Opus was ~$0.26); 3 tests, 43–50 s each | Short run, no email unless alerting |
 | **Per week** | **~$2.30–2.95** | **≈ 0.8–1.1% of the Pro weekly limit**, up to ~6% of a 5-hour window on Monday morning |
 
 Effort level matters little here, because thinking is under 10% of output. Plan-usage percentages come from a before/after reading of the Pro usage bars on 2026-11-20: about $3.90 of usage moved the weekly bar by about 1 point, so a week ≈ $270–300 API-equivalent. That reading is rough.
@@ -216,6 +224,6 @@ python -m pytest -q
 - **Quarterly inputs:** BDC non-accruals and PIK, plus fund redemptions and gates, are filled by the weekly run around earnings season. ARCC doesn't break out PIK in its press release, so the 10-Q is needed. Two redemption figures are still marked "verify vs SC TO-I/A".
 - **Calendar dates** are approximate. Update `config/calendar.yaml` when official schedules are published (the fall 2026 Fed FSR reminder was removed; the report came out 13 Nov).
 - **Replay coverage:** ICE BofA OAS history on FRED covers about 3 years, so the 2020 and 2023 stress episodes can't be replayed for spreads.
-- **Sonnet 5.5 (daily task):** two test runs committed correctly, pushed to `main` only and ended with the status line. Still untested on Sonnet: an alerting day that sends an email. Check the first one, and switch the task back to Opus in its settings if the email is incomplete.
+- **Sonnet 5.5 (daily task):** three test runs and the first scheduled run (2026-11-21) committed correctly and pushed to `main` only. The latest two tests ended with the status line, and the latest one ran on `main` from the start with no hook nudge. Still untested on Sonnet: an alerting day that sends an email. Check the first one, and switch the task back to Opus in its settings if the email is incomplete.
 - **Duplicate test reports:** `reports/2026-11-20.md` and `reports/2026-11-21.md` both come from owner-requested test runs. Monday 23 Nov compares against 21 Nov.
 - **Optional:** tune thresholds after 4–6 weeks of history.
