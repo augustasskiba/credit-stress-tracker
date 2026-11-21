@@ -35,3 +35,39 @@ asof,keyword,group,company,form,filed,url
 2026-11-20,reserve build,banks,CITIGROUP INC,10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/831001/000083100126000056/c-20260930.htm
 2026-11-20,reserve build,banks,BANK OF AMERICA CORP /DE/,10-Q,2026-10-30,https://www.sec.gov/Archives/edgar/data/70858/000007085826000548/bac-20260930.htm
 2026-11-20,reserve build,banks,KEYCORP /NEW/,10-Q,2026-11-03,https://www.sec.gov/Archives/edgar/data/91576/000009157626000023/key-20260930.htm
+2026-11-21,fund finance,banks,WELLS FARGO & COMPANY/MN,10-Q,2026-10-28,https://www.sec.gov/Archives/edgar/data/72971/000007297126000327/wfc-20260930.htm
+2026-11-21,nondepository financial,banks,"ZIONS BANCORPORATION, NATIONAL ASSOCIATION /UT/",10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/109380/000010938026000127/zions-20260930.htm
+2026-11-21,nondepository financial,banks,M&T BANK CORP,10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/36270/000003627026000060/mtb-20260930.htm
+2026-11-21,fraud,banks,GOLDMAN SACHS GROUP INC,10-Q,2026-11-02,https://www.sec.gov/Archives/edgar/data/886982/000088698226000532/gs-9302026x10qexhibit311.htm
+2026-11-21,fraud,banks,CITIZENS FINANCIAL GROUP INC/RI,10-Q,2026-10-28,https://www.sec.gov/Archives/edgar/data/759944/000075994426000213/a312certexcfo302-q32026.htm
+2026-11-21,fraud,banks,TRUIST FINANCIAL CORP,10-Q,2026-10-28,https://www.sec.gov/Archives/edgar/data/92230/000009223026000129/ex312cert3q26.htm
+2026-11-21,fraud,banks,HUNTINGTON BANCSHARES INC /MD/,10-Q,2026-10-27,https://www.sec.gov/Archives/edgar/data/49196/000004919626000090/hban20260930_10qex312.htm
+2026-11-21,fraud,banks,FIFTH THIRD BANCORP,10-Q,2026-11-03,https://www.sec.gov/Archives/edgar/data/35527/000003552726000243/a10qfitb-93026xexx31i.htm
+2026-11-21,fraud,banks,M&T BANK CORP,10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/36270/000003627026000060/a10q-exx3123q26.htm
+2026-11-21,fraud,banks,HUNTINGTON BANCSHARES INC /MD/,10-Q,2026-10-27,https://www.sec.gov/Archives/edgar/data/49196/000004919626000090/hban20260930_10qex311.htm
+2026-11-21,fraud,banks,REGIONS FINANCIAL CORP,10-Q,2026-11-09,https://www.sec.gov/Archives/edgar/data/1281761/000128176126000073/rf-2026930xex312.htm
+2026-11-21,fraud,banks,WESTERN ALLIANCE BANCORPORATION,10-Q,2026-10-30,https://www.sec.gov/Archives/edgar/data/1212545/000162828026068599/walex3129302026.htm
+2026-11-21,fraud,banks,"ZIONS BANCORPORATION, NATIONAL ASSOCIATION /UT/",10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/109380/000010938026000127/exh311certofceo10-q20260930.htm
+2026-11-21,fraud,insurers,LINCOLN NATIONAL CORP,10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/59558/000005955826000072/exhibit311-lnc10qx3q2026.htm
+2026-11-21,fraud,insurers,Jackson Financial Inc.,10-Q,2026-11-03,https://www.sec.gov/Archives/edgar/data/1822993/000182299326000171/exhibit311_q3-2026.htm
+2026-11-21,fraud,insurers,"Corebridge Financial, Inc.",10-Q,2026-11-03,https://www.sec.gov/Archives/edgar/data/1889539/000188953926000159/q32026exhibit312.htm
+2026-11-21,fraud,insurers,"Brighthouse Financial, Inc.",10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/1685040/000168504026000037/bhf-09302026xex312.htm
+2026-11-21,fraud,insurers,"Brighthouse Financial, Inc.",10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/1685040/000168504026000037/bhf-09302026xex311.htm
+2026-11-21,fraud,insurers,METLIFE INC,10-Q,2026-11-06,https://www.sec.gov/Archives/edgar/data/1099219/000109921926000062/mlinc-2026930xex312.htm
+2026-11-21,fraud,insurers,METLIFE INC,10-Q,2026-11-06,https://www.sec.gov/Archives/edgar/data/1099219/000109921926000062/mlinc-2026930xex311.htm
+2026-11-21,fraud,insurers,Jackson Financial Inc.,10-Q,2026-11-03,https://www.sec.gov/Archives/edgar/data/1822993/000182299326000171/exhibit312_q3-2026.htm
+2026-11-21,fraud,insurers,"F&G Annuities & Life, Inc.",10-Q,2026-11-06,https://www.sec.gov/Archives/edgar/data/1934850/000193485026000110/exhibit311sarbanesoxleycer.htm
+2026-11-21,fraud,insurers,LINCOLN NATIONAL CORP,10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/59558/000005955826000072/exhibit312-lnc10qx3q2026.htm
+2026-11-21,charge-off,banks,CAPITAL ONE FINANCIAL CORP,8-K,2026-11-16,https://www.sec.gov/Archives/edgar/data/927628/000092762826000160/ex991october2026creditmetr.htm
+2026-11-21,charge-off,banks,CAPITAL ONE FINANCIAL CORP,8-K,2026-11-16,https://www.sec.gov/Archives/edgar/data/927628/000092762826000160/cof-20261113.htm
+2026-11-21,charge-off,banks,CAPITAL ONE FINANCIAL CORP,10-Q,2026-11-03,https://www.sec.gov/Archives/edgar/data/927628/000092762826000152/cof-20260930.htm
+2026-11-21,charge-off,banks,HUNTINGTON BANCSHARES INC /MD/,8-K,2026-10-22,https://www.sec.gov/Archives/edgar/data/49196/000004919626000084/hban20260930_8kex991.htm
+2026-11-21,charge-off,banks,HUNTINGTON BANCSHARES INC /MD/,8-K,2026-10-22,https://www.sec.gov/Archives/edgar/data/49196/000004919626000084/hban20260930_8kex992.htm
+2026-11-21,charge-off,banks,JPMORGAN CHASE & CO,10-Q,2026-11-03,https://www.sec.gov/Archives/edgar/data/19617/000162828026069523/jpm-20260930.htm
+2026-11-21,charge-off,banks,CITIZENS FINANCIAL GROUP INC/RI,10-Q,2026-10-28,https://www.sec.gov/Archives/edgar/data/759944/000075994426000213/cfg-20260930.htm
+2026-11-21,charge-off,banks,US BANCORP \DE\,10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/36104/000003610426000058/usb-20260930.htm
+2026-11-21,charge-off,banks,WESTERN ALLIANCE BANCORPORATION,10-Q,2026-10-30,https://www.sec.gov/Archives/edgar/data/1212545/000162828026068599/wal-20260930.htm
+2026-11-21,charge-off,banks,"PNC FINANCIAL SERVICES GROUP, INC.",10-Q,2026-11-03,https://www.sec.gov/Archives/edgar/data/713676/000162828026069377/pnc-20260930.htm
+2026-11-21,reserve build,banks,CITIGROUP INC,10-Q,2026-11-05,https://www.sec.gov/Archives/edgar/data/831001/000083100126000056/c-20260930.htm
+2026-11-21,reserve build,banks,BANK OF AMERICA CORP /DE/,10-Q,2026-10-30,https://www.sec.gov/Archives/edgar/data/70858/000007085826000548/bac-20260930.htm
+2026-11-21,reserve build,banks,KEYCORP /NEW/,10-Q,2026-11-03,https://www.sec.gov/Archives/edgar/data/91576/000009157626000023/key-20260930.htm
