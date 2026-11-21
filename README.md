@@ -15,15 +15,18 @@ Two Claude Code cloud scheduled tasks run the tracker. Each follows `RUNBOOK.md`
 
 - **Repo and connector:** each run starts a fresh cloud session with this repo and the Gmail connector attached.
 - **Every run:**
+  - switches from its auto-named session branch to `main` before starting;
   - scores the signals and commits history to `data/`;
   - pushes to `main` only;
   - ends its final reply with a one-line status, e.g. `daily · Contained grind · 1 red / 1 amber · email not sent (no alerts) · commit ee56dfd`.
 - **Weekly run only:**
   - reads new SEC filings and checks the news (insurer ratings, Fed actions, fund gates, BDC quarterly figures);
   - records sources in `config/manual_inputs.yaml`;
+  - removes coming-up reminders that have already happened from `config/calendar.yaml`;
   - writes a 3-line summary;
   - saves a report to `reports/<date>.md`.
-- **If Gmail fails:** the run opens a GitHub issue on this repo instead, and GitHub emails you.
+- **If Gmail fails or a safety guard refuses the send:** the run opens a GitHub issue on this repo instead, and GitHub emails you. Runs never try to get around a guard.
+- **Re-runs on the same day** replace that day's history rows instead of duplicating them.
 - **Cost:** about $2.30–2.95 a week in API-equivalent usage, roughly 1% of the Pro plan's weekly limit.
 
 ## The weekly email
@@ -81,7 +84,7 @@ python -m pytest -q
 | `config/signals.yaml` | Signals, thresholds and staleness limits |
 | `config/composite.yaml` | Composite levels (Contained grind, Spreading to banks, Systemic funding stress) |
 | `config/manual_inputs.yaml` | Quarterly BDC non-accruals and PIK (average of whichever BDCs reported; fewer than 3 of 4 is flagged as low coverage), fund redemptions and gates, judgement signals, Fed actions. Every value needs a source |
-| `config/calendar.yaml` | SLOOS, earnings, IMF GFSR and Fed FSR reminders |
+| `config/calendar.yaml` | SLOOS, earnings, IMF GFSR and Fed FSR reminders (the weekly run removes ones that have already happened) |
 | `config/settings.yaml` | EDGAR banks, insurers and keywords; history length; repo link used in the email |
 
 ## Where things are
