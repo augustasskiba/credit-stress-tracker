@@ -1,6 +1,6 @@
 # Credit Stress Tracker: Architecture
 
-Status: **v1, live.** Built and tested end to end on 2026-11-20 (manual weekly and daily runs, email received).
+Status: **v1, live.** Built and tested end to end on 2026-11-20 and 2026-11-21 (manual weekly runs on Opus 5.5 and daily runs on Sonnet 5.5, email received). Last doc update: 2026-11-21.
 Source spec: `credit-stress-tracker-spec.md` (the original brief). Operating instructions for scheduled runs: `RUNBOOK.md`.
 
 > Monitoring tool only, not investment advice or a timing signal. Thresholds are rules of thumb.
@@ -29,8 +29,17 @@ The tracker runs as **Claude Code cloud scheduled tasks**. Every run starts a fr
  │ 5. Gmail send_message (weekly always; daily only on a new red / composite rise)        │
  │      fallback: GitHub issue on this repo (GitHub emails the owner)                     │
  │ 6. git commit data/ reports/ config/manual_inputs.yaml → push to main only             │
+ │ 7. final reply ends with the status line (see below)                                   │
  └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Status line.** Every run's final reply must end with one line in a fixed format, with any notes above it. This is required by RUNBOOK step 7 and by both task prompts:
+
+```
+<weekly|daily> · <composite> · <n> red / <n> amber · email <sent|not sent (no alerts)|FAILED: reason> · commit <hash>
+```
+
+If the run replies again (for example after a git hook nudges it to push its session branch, which it must decline), that reply ends with the same line.
 
 **Why this split:** numbers, thresholds, colours, charts and alerts come from plain, tested Python, so the same data always gives the same result. Claude handles the judgement parts: the summary, reading filings, news on insurers, the Fed and fund gates, and sourcing quarterly BDC figures. Every value Claude adds must cite a source.
 
@@ -135,7 +144,7 @@ Every signal is defined in `config/signals.yaml`. No thresholds appear in code.
 - **What it stores:** keyword totals and the returned filings, saved in `data/edgar_scan.csv` and `data/edgar_hits.csv`.
 - **The comparison:** the report shows totals against the **previous scan** (▲▼ change) and lists **new filings**, meaning filings not among the top results of any earlier scan. Claude reads new filings first when it judges `bank_disclosures`.
 - **Limitation:** "new" is detected only among the top 10 results per keyword, so it can miss new filings for very common keywords such as "fraud".
-- **Baseline:** the 2026-11-20 scan. The first real comparison is Monday 23 Nov.
+- **Baseline and first comparison:** the 2026-11-20 scan is the baseline. The 2026-11-21 test run was the first real comparison: totals vs 20 Nov plus one new filing, a Zions 10-Q exhibit matching only boilerplate "fraud" wording.
 
 ---
 
@@ -170,21 +179,22 @@ Every signal is defined in `config/signals.yaml`. No thresholds appear in code.
 | Gmail rejected the send | More than 10 attachments | 4 stage images |
 | Gmail send blocked | Privacy guard: owner address plus sec.gov links | SEC links removed from email bodies only |
 | Email zoomed out, centred headers | `<style>` dropped; unbreakable URLs widened a table | Inline styles, fixed column, wrapped short links |
-| Stray `claude/*` branch | Scheduled sessions start on their own branch | Runbook: push to `main` only |
+| Stray `claude/*` branch | Scheduled sessions start on their own branch; a git hook nudges them to push it | Runbook and prompts: push to `main` only, decline the hook |
+| Final reply ended without the status line | A hook-reply became the last message | Status line required as the last line of every reply |
 
 ---
 
 ## 10. Cost and plan usage
 
-Measured 2026-11-20 on Opus 5.5 at list prices. The weekly report stays on Opus 5.5. The daily check now runs on **Sonnet 5.5**, which is half the per-token price ($2 / $10 per MTok in/out, $0.10 cache reads), so expect about $0.13 per daily check.
+Measured on test runs on 2026-11-20 and 2026-11-21, at list prices. The weekly report runs on Opus 5.5. The daily check runs on **Sonnet 5.5**, which is half the per-token price ($2 / $10 per MTok in/out, $0.10 cache reads).
 
 | Run | API-equivalent | Drivers |
 |---|---|---|
-| Weekly report | ~$1.65–2.30 | Loading context (~50%) and writing out the ~53 KB email (~40%); more when sourcing quarterly BDC figures |
-| Daily check | ~$0.26 | Short run, no email unless alerting |
-| **Per week** | **~$3.00–3.60** | **≈ 1.0–1.3% of the Pro weekly limit**, up to ~6% of a 5-hour window on Monday morning |
+| Weekly report (Opus 5.5) | ~$1.65–2.30 (last test $2.03) | Loading context (~50%) and writing out the ~53 KB email (~40%); more when sourcing quarterly BDC figures |
+| Daily check (Sonnet 5.5) | ~$0.12–0.13 (Opus was ~$0.26) | Short run, no email unless alerting |
+| **Per week** | **~$2.30–2.95** | **≈ 0.8–1.1% of the Pro weekly limit**, up to ~6% of a 5-hour window on Monday morning |
 
-Effort level matters little here, because thinking is under 10% of output. With the daily check on Sonnet 5.5, expect about $2.30–3.00 a week (about 0.8–1.1% of the Pro weekly limit).
+Effort level matters little here, because thinking is under 10% of output. Plan-usage percentages come from a before/after reading of the Pro usage bars on 2026-11-20: about $3.90 of usage moved the weekly bar by about 1 point, so a week ≈ $270–300 API-equivalent. That reading is rough.
 
 ---
 
@@ -204,7 +214,8 @@ python -m pytest -q
 
 - **FSK P/NAV:** it has traded below 0.80× NAV for about half of the replay period, so it may stay red on its own. Keeping the spec threshold for now (owner's choice). Revisit with a per-BDC baseline after a few weeks of data.
 - **Quarterly inputs:** BDC non-accruals and PIK, plus fund redemptions and gates, are filled by the weekly run around earnings season. ARCC doesn't break out PIK in its press release, so the 10-Q is needed. Two redemption figures are still marked "verify vs SC TO-I/A".
-- **Calendar dates** are approximate. Update `config/calendar.yaml` when official schedules are published.
+- **Calendar dates** are approximate. Update `config/calendar.yaml` when official schedules are published (the fall 2026 Fed FSR reminder was removed; the report came out 13 Nov).
 - **Replay coverage:** ICE BofA OAS history on FRED covers about 3 years, so the 2020 and 2023 stress episodes can't be replayed for spreads.
-- **Sonnet 5.5 check (daily task):** confirm the first daily runs on Sonnet commit history correctly and, when alerting, send a complete email. Switch the task back to Opus in its settings if not.
+- **Sonnet 5.5 (daily task):** two test runs committed correctly, pushed to `main` only and ended with the status line. Still untested on Sonnet: an alerting day that sends an email. Check the first one, and switch the task back to Opus in its settings if the email is incomplete.
+- **Duplicate test reports:** `reports/2026-11-20.md` and `reports/2026-11-21.md` both come from owner-requested test runs. Monday 23 Nov compares against 21 Nov.
 - **Optional:** tune thresholds after 4–6 weeks of history.
