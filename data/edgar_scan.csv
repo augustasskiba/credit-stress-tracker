@@ -23,3 +23,15 @@ asof,keyword,group,total
 2026-11-21,charge-off,insurers,0
 2026-11-21,reserve build,banks,3
 2026-11-21,reserve build,insurers,0
+2026-11-23,fund finance,banks,1
+2026-11-23,fund finance,insurers,0
+2026-11-23,NAV loan,banks,0
+2026-11-23,NAV loan,insurers,0
+2026-11-23,nondepository financial,banks,2
+2026-11-23,nondepository financial,insurers,0
+2026-11-23,fraud,banks,57
+2026-11-23,fraud,insurers,22
+2026-11-23,charge-off,banks,17
+2026-11-23,charge-off,insurers,0
+2026-11-23,reserve build,banks,3
+2026-11-23,reserve build,insurers,0
