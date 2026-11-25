@@ -5,3 +5,4 @@ run_id,run_ts,mode,asof,composite_level,composite_name,n_red,n_amber,n_stale,err
 2026-11-21-daily-112132,2026-11-21T11:21:32Z,daily,2026-11-21,1,Contained grind,1,1,0,
 2026-11-23-weekly-100758,2026-11-23T10:07:58Z,weekly,2026-11-23,1,Contained grind,4,4,0,
 2026-11-24-daily-070857,2026-11-24T07:08:57Z,daily,2026-11-24,1,Contained grind,1,1,0,
+2026-11-25-daily-070831,2026-11-25T07:08:31Z,daily,2026-11-25,1,Contained grind,1,1,0,
